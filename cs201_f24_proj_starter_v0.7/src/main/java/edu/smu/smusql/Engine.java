@@ -1,7 +1,11 @@
 package edu.smu.smusql;
 
-public class Engine {
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
+public class Engine {
+    private Database database = new Database();
     public String executeSQL(String query) {
         String[] tokens = query.trim().split("\\s+");
         String command = tokens[0].toUpperCase();
@@ -40,8 +44,29 @@ public class Engine {
         return "not implemented";
     }
     public String create(String[] tokens) {
-        //TODO
-        return "not implemented";
+        if (!tokens[1].equalsIgnoreCase("TABLE")) {
+            return "ERROR: Invalid CREATE TABLE syntax";
+        }
+        
+        String tableName = tokens[2];
+        
+        String columnList = queryBetweenParentheses(tokens, 3);
+        List<String> columns = Arrays.asList(columnList.split(","));
+        columns.replaceAll(String::trim);
+
+        database.createTable(tableName, columns);
+
+        return "Table " + tableName + " created";
+    }
+
+    // HELPER METHODS
+    
+    private String queryBetweenParentheses(String[] tokens, int startIndex) {
+        StringBuilder result = new StringBuilder();
+        for (int i = startIndex; i < tokens.length; i++) {
+            result.append(tokens[i]).append(" ");
+        }
+        return result.toString().trim().replaceAll("\\(", "").replaceAll("\\)", "");
     }
 
 }
