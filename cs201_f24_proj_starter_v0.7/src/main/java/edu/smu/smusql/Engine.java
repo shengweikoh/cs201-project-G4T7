@@ -5,6 +5,10 @@ import java.util.Iterator;
 import java.util.List;
 
 public class Engine {
+    public Database getDatabase() {
+    return database;
+}
+
     private Database database = new Database();
     public String executeSQL(String query) {
         String[] tokens = query.trim().split("\\s+");
@@ -49,6 +53,9 @@ public class Engine {
         }
         
         String tableName = tokens[2];
+        if (database.listTables().contains(tableName)) {
+            return "ERROR: Table already exists";
+        }
         
         String columnList = queryBetweenParentheses(tokens, 3);
         List<String> columns = Arrays.asList(columnList.split(","));
