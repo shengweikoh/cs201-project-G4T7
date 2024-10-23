@@ -33,18 +33,31 @@ public class Engine {
     }
 
     public String insert(String[] tokens) {
+        //Parse tokens 
         List<Object> parsedData = parser.parseInsert(tokens);
-        String tableName = (String) parsedData.get(0); // Table name
-        List<Object> values = (List<Object>) parsedData.get(1); // Values to insert
-    
-        Table table = database.getTable(tableName);
-        
-        // Ensure that the first value is used as the primary key
-        Object primaryKey = values.get(0); // Assuming the first value is the primary key
-        System.out.println("Inserting into table: " + tableName + ", Primary Key: " + primaryKey + ", Values: " + values);
 
-        // Use the updated insertRow with the correct value types
-        table.insertRow(primaryKey, values); 
+        //Get table name and list of  values from parsed data
+        String tableName = (String) parsedData.get(0);
+        List<Object> values = (List<Object>) parsedData.get(1);
+
+        //Get table from database
+        Table table = database.getTable(tableName);
+        if(table == null){
+            return  "ERROR: table " + tableName + " not found.";
+        }
+
+        //Get primary key
+        Object primaryKey = values.get(0);
+
+        //Insert row to table
+        System.out.println("Inserting into table: " + tableName 
+                                + " , Primary key: " + primaryKey + " , Values: " + values);
+                                
+        try {
+                table.insertRow(primaryKey, values);
+            } catch (IllegalArgumentException e) {
+                return "ERROR: " + e.getMessage(); // Return specific error messages
+            }
         
         return "Insertion Successful";
     }

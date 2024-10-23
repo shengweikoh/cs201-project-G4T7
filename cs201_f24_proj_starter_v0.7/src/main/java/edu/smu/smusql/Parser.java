@@ -27,6 +27,8 @@ public class Parser {
         data.add(tableName);
         data.add(values);
         return data;
+
+        
     }
 
     public void parseDelete(String[] tokens) {
