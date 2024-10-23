@@ -50,10 +50,21 @@ public class Table {
             String column = columns.get(i);
             Object value = values.get(i);
 
+            // Initialize TreeMap if not already done
+            columnTreeMaps.computeIfAbsent(column, k -> new TreeMap<>());
+
             // For each column, store the value and associate it with the row in the TreeMap
             TreeMap<Object, List<Map<String, Object>>> treeMap = columnTreeMaps.get(column);
             treeMap.computeIfAbsent(value, k -> new ArrayList<>()).add(row);
+
+            // Debugging output for TreeMap
+        System.out.println("For column: " + column + ", added value: " + value + " associated with row: " + row);
+        System.out.println("Current TreeMap for column " + column + ": " + treeMap);
+        System.out.println();
         }
+
+        System.out.println("Inserted row: " + row);
+        System.out.println("Current primary key map: " + primaryKeyMap);
     }
 
     //  get row by primary key (exact match)
@@ -90,4 +101,13 @@ public class Table {
     public List<String> getColumns() {
         return columns;
     }
+
+    @Override
+public String toString() {
+    return "Table{" +
+           "columns=" + columns +
+           ", primaryKeyMap=" + primaryKeyMap +
+           '}';
+}
+
 }

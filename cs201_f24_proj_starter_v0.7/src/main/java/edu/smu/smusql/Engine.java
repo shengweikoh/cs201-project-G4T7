@@ -6,10 +6,12 @@ import java.util.List;
 
 public class Engine {
     public Database getDatabase() {
-    return database;
-}
+        return database;
+    }
 
     private Database database = new Database();
+    private Parser parser = new Parser();
+
     public String executeSQL(String query) {
         String[] tokens = query.trim().split("\\s+");
         String command = tokens[0].toUpperCase();
@@ -31,9 +33,23 @@ public class Engine {
     }
 
     public String insert(String[] tokens) {
-        //TODO
-        return "not implemented";
+        List<Object> parsedData = parser.parseInsert(tokens);
+        String tableName = (String) parsedData.get(0); // Table name
+        List<Object> values = (List<Object>) parsedData.get(1); // Values to insert
+    
+        Table table = database.getTable(tableName);
+        
+        // Ensure that the first value is used as the primary key
+        Object primaryKey = values.get(0); // Assuming the first value is the primary key
+        System.out.println("Inserting into table: " + tableName + ", Primary Key: " + primaryKey + ", Values: " + values);
+
+        // Use the updated insertRow with the correct value types
+        table.insertRow(primaryKey, values); 
+        
+        return "Insertion Successful";
     }
+    
+    
     public String delete(String[] tokens) {
         //TODO
         return "not implemented";
@@ -47,6 +63,7 @@ public class Engine {
         //TODO
         return "not implemented";
     }
+
     public String create(String[] tokens) {
         if (!tokens[1].equalsIgnoreCase("TABLE")) {
             return "ERROR: Invalid CREATE TABLE syntax";
