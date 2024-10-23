@@ -1,4 +1,5 @@
 package edu.smu.smusql;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,11 +14,11 @@ public class Database {
     }
 
     // Method to create a new table
-    public void createTable(String tableName, List<String> columns) {
+    public void createTable(String tableName, List<String> columns, boolean useBTree) {
         if (tables.containsKey(tableName)) {
             throw new IllegalArgumentException("Table already exists");
         }
-        tables.put(tableName, new Table(tableName, columns));
+        tables.put(tableName, new Table(tableName, columns, useBTree));
     }
 
     // Method to retrieve a table by name

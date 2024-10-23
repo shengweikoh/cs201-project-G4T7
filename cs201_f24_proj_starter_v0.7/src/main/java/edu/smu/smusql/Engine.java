@@ -6,10 +6,12 @@ import java.util.List;
 
 public class Engine {
     public Database getDatabase() {
-    return database;
-}
+        return database;
+    }
 
     private Database database = new Database();
+    private Parser parser = new Parser();
+
     public String executeSQL(String query) {
         String[] tokens = query.trim().split("\\s+");
         String command = tokens[0].toUpperCase();
@@ -31,9 +33,36 @@ public class Engine {
     }
 
     public String insert(String[] tokens) {
-        //TODO
-        return "not implemented";
+        //Parse tokens 
+        List<Object> parsedData = parser.parseInsert(tokens);
+
+        //Get table name and list of  values from parsed data
+        String tableName = (String) parsedData.get(0);
+        List<Object> values = (List<Object>) parsedData.get(1);
+
+        //Get table from database
+        Table table = database.getTable(tableName);
+        if(table == null){
+            return  "ERROR: table " + tableName + " not found.";
+        }
+
+        //Get primary key
+        Object primaryKey = values.get(0);
+
+        //Insert row to table
+        System.out.println("Inserting into table: " + tableName 
+                                + " , Primary key: " + primaryKey + " , Values: " + values);
+                                
+        try {
+                table.insertRow(primaryKey, values);
+            } catch (IllegalArgumentException e) {
+                return "ERROR: " + e.getMessage(); // Return specific error messages
+            }
+        
+        return "Insertion Successful";
     }
+    
+    
     public String delete(String[] tokens) {
         //TODO
         return "not implemented";
@@ -47,6 +76,7 @@ public class Engine {
         //TODO
         return "not implemented";
     }
+
     public String create(String[] tokens) {
         if (!tokens[1].equalsIgnoreCase("TABLE")) {
             return "ERROR: Invalid CREATE TABLE syntax";

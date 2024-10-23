@@ -42,14 +42,35 @@ public class Table {
 
     // Insert a row into the table
     public void insertRow(Object primaryKey, List<Object> values) {
+        // System.out.println("Number of columns: " + columns.size());
+        // System.out.println("Number of values: " + values.size());
+        // System.out.println("Columns: " + columns);
+        // System.out.println("Values: " + values);
+
         if (values.size() != columns.size()) {
             throw new IllegalArgumentException("Number of values doesn't match number of columns");
         }
 
+        for (Object value : values) {
+            if (value == null) {
+                throw new IllegalArgumentException("Values cannot be null");
+            }
+        }
+
+        if (primaryKeyMap.containsKey(primaryKey)) {
+            throw new IllegalArgumentException("Duplicate primary key: " + primaryKey);
+        }
+       
+
         // Insert the row into the primary key map for exact lookups
         Map<String, Object> row = new HashMap<>();
         for (int i = 0; i < columns.size(); i++) {
-            row.put(columns.get(i), values.get(i));
+            // Trim string values to remove any leading or trailing whitespace
+            Object value = values.get(i);
+            if (value instanceof String) {
+                value = ((String) value).trim(); // Trim whitespace from strings
+            }
+            row.put(columns.get(i), value);
         }
         primaryKeyMap.put(primaryKey, row);
 
@@ -68,6 +89,9 @@ public class Table {
                 treeMap.computeIfAbsent(value, k -> new ArrayList<>()).add(row);
             }
         }
+
+        // System.out.println("Inserted row: " + row);
+        // System.out.println("Current primary key map: " + primaryKeyMap);
     }
 
     // Get row by primary key (exact match)
@@ -100,4 +124,13 @@ public class Table {
     public List<String> getColumns() {
         return columns;
     }
+
+    @Override
+public String toString() {
+    return "Table{" +
+           "columns=" + columns +
+           ", primaryKeyMap=" + primaryKeyMap +
+           '}';
+}
+
 }
