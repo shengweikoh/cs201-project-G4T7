@@ -10,90 +10,92 @@ import java.util.TreeMap;
 public class Table {
     private String tableName;
     private List<String> columns;
+    private boolean useBTree;  // To toggle between B-tree and TreeMap (Red-Black tree)
 
-    // hashMap for exact primary key lookups
+    // HashMap for exact primary key lookups
     private Map<Object, Map<String, Object>> primaryKeyMap;
 
-    // (B-tree) for range queries on other columns
-    private Map<String, TreeMap<Object, List<Map<String, Object>>>> columnTreeMaps;
+    // Data structures for range queries on other columns
+    private Map<String, BTree<String>> columnBTrees;  // Using String as an example
+    private Map<String, TreeMap<String, List<Map<String, Object>>>> columnRedBlackTrees;
 
-    // constructor to initialize the table with a name and columns
-    public Table(String tableName, List<String> columns) {
+    // Constructor to initialize the table with a name and columns
+    public Table(String tableName, List<String> columns, boolean useBTree) {
         this.tableName = tableName;
         this.columns = columns;
-        this.primaryKeyMap = new HashMap<>();  // For primary key exact match
-        this.columnTreeMaps = new HashMap<>(); // For range queries
+        this.useBTree = useBTree;
+        this.primaryKeyMap = new HashMap<>();
 
-        // Initialize a TreeMap for each column that might need range queries
-        for (String column : columns) {
-            columnTreeMaps.put(column, new TreeMap<>());
+        // Initialize appropriate index structures
+        if (useBTree) {
+            this.columnBTrees = new HashMap<>();
+            for (String column : columns) {
+                columnBTrees.put(column, new BTree<>(3));  // Example: B-tree with minimum degree 3
+            }
+        } else {
+            this.columnRedBlackTrees = new HashMap<>();
+            for (String column : columns) {
+                columnRedBlackTrees.put(column, new TreeMap<>());  // TreeMap is a Red-Black tree
+            }
         }
     }
 
-    // insert a row into the table
+    // Insert a row into the table
     public void insertRow(Object primaryKey, List<Object> values) {
         if (values.size() != columns.size()) {
             throw new IllegalArgumentException("Number of values doesn't match number of columns");
         }
 
-        // create a row to store data
+        // Insert the row into the primary key map for exact lookups
         Map<String, Object> row = new HashMap<>();
         for (int i = 0; i < columns.size(); i++) {
             row.put(columns.get(i), values.get(i));
         }
-
-        // insert into HashMap for primary key exact matching
         primaryKeyMap.put(primaryKey, row);
 
-        // insert into TreeMaps for range queries
-        for (int i = 0; i < columns.size(); i++) {
-            String column = columns.get(i);
-            Object value = values.get(i);
-
-            // Initialize TreeMap if not already done
-            columnTreeMaps.computeIfAbsent(column, k -> new TreeMap<>());
-
-            // For each column, store the value and associate it with the row in the TreeMap
-            TreeMap<Object, List<Map<String, Object>>> treeMap = columnTreeMaps.get(column);
-            treeMap.computeIfAbsent(value, k -> new ArrayList<>()).add(row);
-
-            // Debugging output for TreeMap
-        System.out.println("For column: " + column + ", added value: " + value + " associated with row: " + row);
-        System.out.println("Current TreeMap for column " + column + ": " + treeMap);
-        System.out.println();
+        // Insert into the appropriate data structure for range queries
+        if (useBTree) {
+            for (int i = 0; i < columns.size(); i++) {
+                String column = columns.get(i);
+                String value = (String) values.get(i);  // Assuming values are strings
+                columnBTrees.get(column).insert(value, row);
+            }
+        } else {
+            for (int i = 0; i < columns.size(); i++) {
+                String column = columns.get(i);
+                String value = (String) values.get(i);  // Assuming values are strings
+                TreeMap<String, List<Map<String, Object>>> treeMap = columnRedBlackTrees.get(column);
+                treeMap.computeIfAbsent(value, k -> new ArrayList<>()).add(row);
+            }
         }
 
         System.out.println("Inserted row: " + row);
         System.out.println("Current primary key map: " + primaryKeyMap);
     }
 
-    //  get row by primary key (exact match)
+    // Get row by primary key (exact match)
     public Map<String, Object> getRowByPrimaryKey(Object primaryKey) {
         return primaryKeyMap.get(primaryKey); // O(1) average time
     }
 
-    // select rows based on range conditions (e.g., GPA > 3.0)
+    // Select rows based on range conditions (e.g., GPA > 3.0)
     public List<Map<String, Object>> selectRowsWithRange(String column, Object lowerBound, Object upperBound) {
-        if (!columnTreeMaps.containsKey(column)) {
-            throw new IllegalArgumentException("Column not found: " + column);
-        }
-        
-        TreeMap<Object, List<Map<String, Object>>> treeMap = columnTreeMaps.get(column);
-
-        // Inclusive range query (including both bounds)
-        SortedMap<Object, List<Map<String, Object>>> range = treeMap.subMap(lowerBound, true, upperBound, true);
-        
-        // Flatten the result to get a single list of rows
         List<Map<String, Object>> result = new ArrayList<>();
-        for (List<Map<String, Object>> rows : range.values()) {
-            result.addAll(rows);  // Add each list of rows to the result list
+
+        if (useBTree) {
+            BTree<String> bTree = columnBTrees.get(column);
+            result = bTree.rangeQuery((String) lowerBound, (String) upperBound);
+        } else {
+            TreeMap<String, List<Map<String, Object>>> treeMap = columnRedBlackTrees.get(column);
+            SortedMap<String, List<Map<String, Object>>> range = treeMap.subMap((String) lowerBound, true, (String) upperBound, true);
+            for (List<Map<String, Object>> rows : range.values()) {
+                result.addAll(rows);
+            }
         }
 
         return result;
     }
 
-     //other method go here? idk 
-    // Getter methods for table name, columns, etc.
     public String getTableName() {
         return tableName;
     }
