@@ -27,7 +27,7 @@ class InsertTest {
     void testInsertCommand() {
         // System.out.println("---INSERT COMMAND TEST---\n");
         // Execute insert command
-        String result = engine.executeSQL("INSERT INTO Users VALUES (1, 'Alice', 30)");
+        String result = engine.executeSQL("INSERT INTO Users VALUES (1, Alice, 30)");
         assertEquals("Insertion Successful", result);
 
         // Retrieve the table and check the inserted row
@@ -37,14 +37,14 @@ class InsertTest {
 
         // System.out.println("Inserted row: " + insertedRow + "\n");
         assertNotNull(insertedRow, "Inserted row should not be null");
-        assertEquals("'Alice'", insertedRow.get("name"));
+        assertEquals("Alice", insertedRow.get("name"));
         assertEquals("30", insertedRow.get("age"));
     }
 
     @Test
     void testInsertWithInvalidData() {
         // Attempt to insert invalid data (not enough values)
-        String result = engine.executeSQL("INSERT INTO Users VALUES (2, 'Bob')"); // Only 2 values, but 3 expected
+        String result = engine.executeSQL("INSERT INTO Users VALUES (2, Bob)"); // Only 2 values, but 3 expected
         assertTrue(result.startsWith("ERROR:"), "Should return an error for invalid data");
         assertTrue(result.contains("Number of values doesn't match number of columns"), "Should specify the error reason");
     }
@@ -52,7 +52,7 @@ class InsertTest {
     @Test
     void testInsertDuplicatePrimaryKey() {
         // First insert
-        String result1 = engine.executeSQL("INSERT INTO Users VALUES (1, 'Alice', 30)");
+        String result1 = engine.executeSQL("INSERT INTO Users VALUES (1, Alice, 30)");
         assertEquals("Insertion Successful", result1);
 
         // Attempt to insert with the same primary key
