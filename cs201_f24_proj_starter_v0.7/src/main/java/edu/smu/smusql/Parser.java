@@ -32,6 +32,7 @@ public class Parser {
     }
 
     public void parseDelete(String[] tokens) {
+        // Eg delete from student where sid = 657889
         String tableName = tokens[2]; // The name of the table to be deleted from.
 
         List<String[]> whereClauseConditions = new ArrayList<>(); // Array for storing conditions from the where clause.

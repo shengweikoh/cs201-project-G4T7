@@ -67,8 +67,85 @@ public class Engine {
     }
 
     public String delete(String[] tokens) {
-        // TODO
-        return "not implemented";
+        // Check syntax
+        if (!tokens[1].toUpperCase().equals("FROM") || !tokens[3].toUpperCase().equals("WHERE")) {
+            return "ERROR: Invalid DELETE syntax";
+        }
+
+        String tableName = tokens[2];
+
+        // Check if table doesn't exist
+        if(!database.listTables().contains(tableName)) {
+            return "ERROR: No such table";
+        }
+
+        // If table exists, fetch the table
+        Table table = null;
+        try {
+            table = database.getTable(tableName); // database is where tables are stored after being created - not the same as cache
+        } catch (IllegalArgumentException e) {
+            return e.getMessage();
+        }
+
+        List<String> columns = table.getColumns();
+
+        // Initialize whereClauseConditions list
+        List<String[]> whereClauseConditions = new ArrayList<>();
+        List<Boolean> andOrConditions = new ArrayList<>();
+
+        // Iterate through the where condition
+        if(tokens.length > 3 && tokens[3].toUpperCase().equals("WHERE")) {
+            for(int i = 4; i < tokens.length; i++) {
+                if(tokens[i].toUpperCase().equals("AND")) {
+                    // true for AND
+                    andOrConditions.add(true);
+                } else if (tokens[i].toUpperCase().equals("OR")) {
+                    // false for OR
+                    andOrConditions.add(false);
+                } else if (isOperator(tokens[i])) {
+                    // eg where gpa < 2.0
+                    // col, operator, value
+
+                    String column = tokens[i - 1]; // idx is at operator so -1 to go back
+                    
+                    if(!table.getColumns().contains(column)) {
+                        return "ERROR: Column not found: " + column;
+                    }
+
+                    String operator = tokens[i];
+                    String value = tokens[i+1];
+
+                    whereClauseConditions.add(new String[]{column, operator, value});
+
+                    i++; // increment i by 1 because i+1 stored in token
+                }
+            }
+        }
+
+        // Evaluate WHERE conditions to get rows to delete
+        Set<Map<String, Object>> rowsToDelete = evaluateWhereCondition(whereClauseConditions.get(0), table);
+
+        for (int i = 1; i < whereClauseConditions.size(); i++) {
+            Set<Map<String, Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+            if (andOrConditions.get(i - 1)) {
+                rowsToDelete.retainAll(newRows); // AND condition
+            } else {
+                rowsToDelete.addAll(newRows); // OR condition
+            }
+        }
+
+        // Delete the matched rows
+        // for (Map<String, Object> row : rowsToDelete) {
+        //     table.getPrimaryKeyMap().remove(row.get(table.getPrimaryKeyColumn()));
+
+        // }
+        for (Map<String, Object> rowToDelete : rowsToDelete) {
+            table.getPrimaryKeyMap().entrySet().removeIf(entry -> entry.getValue().equals(rowToDelete));
+        }
+        
+
+
+        return rowsToDelete.size() + " row(s) deleted from " + tableName;
     }
 
     public String select(String[] tokens) {
