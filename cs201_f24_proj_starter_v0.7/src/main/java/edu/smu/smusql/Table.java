@@ -12,7 +12,7 @@ public class Table {
     private final String tableName;
     private final List<String> columns;
     private final String primaryKey;
-    private boolean useBTree;
+    private boolean useBTree = false; // set to true if wan to use btree
 
     // HashMap for exact primary key lookups
     private Map<String, Map<String, Object>> primaryKeyMap;
