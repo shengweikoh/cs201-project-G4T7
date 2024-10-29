@@ -62,9 +62,69 @@ public class Engine {
     }
 
     public String update(String[] tokens) {
-        // TODO
-        return "not implemented";
+        // Example sql query: UPDATE employees SET salary = 58000 WHERE id = 1
+
+        // Assign parsed tokens
+        String tableName = tokens[1];
+        String columnToUpdate = tokens[3];
+        String newValue = tokens[5];
+
+        // Process the WHERE conditions
+        List<String[]> whereCondition = new ArrayList<>();
+        if (tokens.length > 6 && tokens[6].equalsIgnoreCase("WHERE")) {
+            String column = tokens[7];
+            String operator = tokens[8];
+            String value = tokens[9];
+            whereCondition.add(new String[] {null, column, operator, value});
+        }
+    
+        // Retrieve the target table from the Database
+        Table table = database.getTable(tableName);
+        if (table == null) {
+            throw new IllegalArgumentException("Table " + tableName + " does not exist.");
+        }
+    
+        // Check if the column to update exists in the table
+        if (!table.getColumns().contains(columnToUpdate)) {
+            throw new IllegalArgumentException("Column " + columnToUpdate + " does not exist in table " + tableName);
+        }
+    
+        boolean anyRowUpdated = false;
+    
+        // Find rows that match the where conditions
+        Map<String, Map<String, Object>> primaryKeyMap = table.getPrimaryKeyMap();
+        for (Map.Entry<String, Map<String, Object>> entry : primaryKeyMap.entrySet()) {
+            Map<String, Object> row = entry.getValue();
+    
+            // Check the condition operator and value
+            boolean rowMatches = true;
+            for (String[] condition : whereCondition) {
+                String column = condition[1];
+                String operator = condition[2];
+                String value = condition[3];
+    
+                Object columnValue = row.get(column);
+                rowMatches = switch (operator) {
+                    case "=" -> columnValue.toString().equals(value);
+                    case ">" -> Double.parseDouble(columnValue.toString()) > Double.parseDouble(value);
+                    case "<" -> Double.parseDouble(columnValue.toString()) < Double.parseDouble(value);
+                    case ">=" -> Double.parseDouble(columnValue.toString()) >= Double.parseDouble(value);
+                    case "<=" -> Double.parseDouble(columnValue.toString()) <= Double.parseDouble(value);
+                    default -> throw new IllegalArgumentException("Unsupported operator " + operator);
+                };
+    
+                if (!rowMatches) break;
+            }
+    
+            // Update row if it matches all conditions
+            if (rowMatches) {
+                row.put(columnToUpdate, newValue);
+                anyRowUpdated = true;
+            }
+        }
+                return anyRowUpdated ? "Update Successful" : "No Rows Affected";
     }
+    
 
     public String delete(String[] tokens) {
         // Check syntax
