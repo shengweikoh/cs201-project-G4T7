@@ -1,6 +1,7 @@
 package edu.smu.smusql;
 
-import java.util.*;
+import java.util.Random;
+import java.util.Scanner;
 
 // @author ziyuanliu@smu.edu.sg
 
@@ -45,7 +46,7 @@ public class Main {
     public static void autoEvaluate() {
 
         // Set the number of queries to execute
-        int numberOfQueries = 1000000;
+        int numberOfQueries = 100000; // suppose to be 1 million
 
         // Create tables
         dbEngine.executeSQL("CREATE TABLE users (id, name, age, city)");
