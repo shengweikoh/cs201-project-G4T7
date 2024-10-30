@@ -82,7 +82,7 @@ public class Table {
         primaryKeyMap.put(primaryKey, row);
 
         // Insert into the appropriate data structure for range queries
-        if (useBTree) {
+        if (this.useBTree) {
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
                 String value = row.get(column).toString(); // Store value as String
