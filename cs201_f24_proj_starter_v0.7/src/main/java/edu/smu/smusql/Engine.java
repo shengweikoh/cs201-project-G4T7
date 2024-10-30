@@ -64,9 +64,125 @@ public class Engine {
     }
 
     public String update(String[] tokens) {
-        // TODO
-        return "not implemented";
-    }
+      // Check syntax
+      if (!tokens[2].equalsIgnoreCase("SET")) {
+          return "ERROR: Invalid UPDATE syntax";
+      }
+  
+      String tableName = tokens[1];
+      
+      // Get the table from the database
+      if (!database.listTables().contains(tableName)) {
+          return "ERROR: No such table";
+      }
+  
+      Table table;
+      try {
+          table = database.getTable(tableName);
+      } catch (IllegalArgumentException e) {
+          return "ERROR: " + e.getMessage();
+      }
+  
+      // Parse the columns and values to be updated
+      Map<String, String> updateValues = new HashMap<>();
+      int setIndex = 3;
+      while (setIndex < tokens.length && !tokens[setIndex].equalsIgnoreCase("WHERE")) {
+          String column = tokens[setIndex];
+          if (!tokens[setIndex + 1].equals("=")) {
+              return "ERROR: Invalid assignment in SET clause";
+          }
+  
+          // Handle multi-word values enclosed in quotes
+          StringBuilder valueBuilder = new StringBuilder();
+          int valueIndex = setIndex + 2;
+            if (tokens[valueIndex].startsWith("\"") || tokens[valueIndex].startsWith("'")) {
+                  String quoteType = tokens[valueIndex].substring(0, 1);
+                        valueBuilder.append(tokens[valueIndex].substring(1)); // Start after the opening quote
+  
+                  while (!tokens[valueIndex].endsWith(quoteType) && valueIndex < tokens.length) {
+                        valueIndex++;
+                        valueBuilder.append(" ").append(tokens[valueIndex]);
+                  }   
+  
+            // Remove the closing quote
+            if (tokens[valueIndex].endsWith(quoteType)) {
+                  valueBuilder.setLength(valueBuilder.length() - 1);
+            }
+            } else if (tokens[valueIndex].endsWith(",")) {
+                  valueBuilder.append(tokens[valueIndex].substring(0, tokens[valueIndex].length() - 1));
+            } else {
+                  valueBuilder.append(tokens[valueIndex]);
+            }
+  
+          String value = valueBuilder.toString();
+  
+          if (!table.getColumns().contains(column)) {
+              return "ERROR: Column not found: " + column;
+          }
+          updateValues.put(column, value);
+          setIndex = valueIndex + 1;
+          if (setIndex < tokens.length && tokens[setIndex].equals(",")) {
+              setIndex++; // Skip the comma
+          }
+      }
+  
+      // Check if there's a WHERE clause
+      List<String[]> whereClauseConditions = new ArrayList<>();
+      List<Boolean> andOrConditions = new ArrayList<>();
+      if (setIndex < tokens.length && tokens[setIndex].equalsIgnoreCase("WHERE")) {
+          setIndex++;
+          for (int i = setIndex; i < tokens.length; i++) {
+              if (tokens[i].equalsIgnoreCase("AND")) {
+                  andOrConditions.add(true);
+              } else if (tokens[i].equalsIgnoreCase("OR")) {
+                  andOrConditions.add(false);
+              } else if (isOperator(tokens[i])) {
+                  String column = tokens[i - 1];
+                  if (!table.getColumns().contains(column)) {
+                      return "ERROR: Column not found: " + column;
+                  }
+                  String operator = tokens[i];
+                  String value = tokens[i + 1];
+  
+                  // Handle values with or without quotes
+                  if (value.startsWith("\"") && value.endsWith("\"") || value.startsWith("'") && value.endsWith("'")) {
+                      value = value.substring(1, value.length() - 1); // Remove the surrounding quotes
+                  }
+  
+                  whereClauseConditions.add(new String[]{column, operator, value});
+                  i += 1; // Skip the value
+              }
+          }
+      }
+  
+      // Get rows that satisfy the WHERE clause
+      Set<String> rowsToUpdate;
+      if (whereClauseConditions.isEmpty()) {
+          // No WHERE clause, update all rows
+          rowsToUpdate = table.getPrimaryKeyMap().keySet();
+      } else {
+          rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
+          for (int i = 1; i < whereClauseConditions.size(); i++) {
+              Set<String> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+              if (andOrConditions.get(i - 1)) {
+                  rowsToUpdate.retainAll(newRows);
+              } else {
+                  rowsToUpdate.addAll(newRows);
+              }
+          }
+      }
+  
+      // Update the rows
+      for (String primaryKey : rowsToUpdate) {
+          Map<String, String> row = table.getPrimaryKeyMap().get(primaryKey);
+          for (Map.Entry<String, String> entry : updateValues.entrySet()) {
+              row.put(entry.getKey(), entry.getValue());
+          }
+      }
+  
+      return rowsToUpdate.size() + " row(s) updated in " + tableName;
+  }
+  
 
     public String delete(String[] tokens) {
       //   // Check syntax
@@ -318,7 +434,7 @@ public class Engine {
         if (columnTreeMap == null) {
             throw new IllegalArgumentException("Column not found: " + column);
         }
-        System.out.println(columnTreeMap.toString());
+      //   System.out.println(columnTreeMap.toString());
     
         // Handle different operators
         switch (operator) {
