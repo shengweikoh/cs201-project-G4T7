@@ -408,57 +408,72 @@ public class Engine {
       }
 
       private Set<Map<String, Object>> evaluateWhereCondition(String[] whereClauseConditions, Table table) {
-            String column = whereClauseConditions[0].trim(); // Column name (e.g., "gpa")
-            String operator = whereClauseConditions[1].trim(); // Operator (e.g., ">", "<", "=", etc.)
-            String valueStr = whereClauseConditions[2].trim(); // Value (e.g., "3.8")
-
-            // We will store the matching rows in a HashSet to avoid duplicates
-            Set<Map<String, Object>> matchingRows = new HashSet<>();
-
-            // Assume we are dealing with TreeMap that stores keys as Strings
+        String column = whereClauseConditions[0].trim(); // Column name (e.g., "gpa")
+        String operator = whereClauseConditions[1].trim(); // Operator (e.g., ">", "<", "=", etc.)
+        String valueStr = whereClauseConditions[2].trim(); // Value (e.g., "3.8")
+    
+        Set<Map<String, Object>> matchingRows = new HashSet<>();
+    
+        // Determine if B-Tree or TreeMap indexing is used based on `useBTree`
+        if (table.useBTree()) {
+            BTree<String> columnBTree = table.getColumnBTree(column); // You may need to add this method in Table
+            if (columnBTree == null) {
+                throw new IllegalArgumentException("Column not found: " + column);
+            }
+    
+            switch (operator) {
+                case "=":
+                    List<Map<String, Object>> exactMatches = columnBTree.search(valueStr); // Assuming `search` method
+                    if (exactMatches != null) {
+                        matchingRows.addAll(exactMatches);
+                    }
+                    break;
+                case ">":
+                case ">=":
+                case "<":
+                case "<=":
+                    // Implement range query for BTree
+                    matchingRows.addAll(columnBTree.rangeQuery(valueStr, operator)); // Custom `rangeQuery` in BTree
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported operator: " + operator);
+            }
+        } else {
+            // Use TreeMap indexing if B-Tree is not enabled
             TreeMap<String, List<Map<String, Object>>> columnTreeMap = table.getColumnTreeMap(column);
             if (columnTreeMap == null) {
-                  throw new IllegalArgumentException("Column not found: " + column);
+                throw new IllegalArgumentException("Column not found: " + column);
             }
-            //System.out.println(columnTreeMap.toString());
-
-            // Handle different operators
+    
             switch (operator) {
-                  case "=":
-                        // Exact match
-                        List<Map<String, Object>> exactMatches = columnTreeMap.get(valueStr); // Use the original string
-                                                                                              // key for exact match
-                        if (exactMatches != null) {
-                              matchingRows.addAll(exactMatches);
-                        }
-                        break;
-                  case ">":
-                  case ">=":
-                  case "<":
-                  case "<=":
-                        // For range queries, we need to convert the String keys to the correct type for
-                        // comparison
-                        SortedMap<String, List<Map<String, Object>>> subMap;
-                        if (operator.equals(">")) {
-                              subMap = columnTreeMap.tailMap(valueStr, false); // Get all values greater than valueStr
-                        } else if (operator.equals(">=")) {
-                              subMap = columnTreeMap.tailMap(valueStr, true); // Get all values greater than or equal to
-                                                                              // valueStr
-                        } else if (operator.equals("<")) {
-                              subMap = columnTreeMap.headMap(valueStr, false); // Get all values less than valueStr
-                        } else {
-                              subMap = columnTreeMap.headMap(valueStr, true); // Get all values less than or equal to
-                                                                              // valueStr
-                        }
-
-                        for (List<Map<String, Object>> rows : subMap.values()) {
-                              matchingRows.addAll(rows);
-                        }
-                        break;
-                  default:
-                        throw new IllegalArgumentException("Unsupported operator: " + operator);
+                case "=":
+                    List<Map<String, Object>> exactMatches = columnTreeMap.get(valueStr);
+                    if (exactMatches != null) {
+                        matchingRows.addAll(exactMatches);
+                    }
+                    break;
+                case ">":
+                case ">=":
+                case "<":
+                case "<=":
+                    SortedMap<String, List<Map<String, Object>>> subMap;
+                    if (operator.equals(">")) {
+                        subMap = columnTreeMap.tailMap(valueStr, false);
+                    } else if (operator.equals(">=")) {
+                        subMap = columnTreeMap.tailMap(valueStr, true);
+                    } else if (operator.equals("<")) {
+                        subMap = columnTreeMap.headMap(valueStr, false);
+                    } else {
+                        subMap = columnTreeMap.headMap(valueStr, true);
+                    }
+                    for (List<Map<String, Object>> rows : subMap.values()) {
+                        matchingRows.addAll(rows);
+                    }
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported operator: " + operator);
             }
-
-            return matchingRows;
-      }
+        }
+        return matchingRows;
+    }
 }
