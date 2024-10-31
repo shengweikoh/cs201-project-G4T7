@@ -71,80 +71,90 @@ public class Engine {
       }
 
       public String update(String[] tokens) {
+            // Check syntax
             if (!tokens[2].equalsIgnoreCase("SET")) {
-                  return "ERROR: Invalid UPDATE syntax";
+                return "ERROR: Invalid UPDATE syntax";
             }
+        
             String tableName = tokens[1];
-
-            // check for existing table
-            if (!database.listTables().contains(tableName)) {
-                  return "ERROR: No such table";
-            }
-
-            Table table;
+        
+            Table table = null;
             try {
-                  table = database.getTable(tableName);
+                table = database.getTable(tableName);
             } catch (IllegalArgumentException e) {
-                  return e.getMessage();
+                return "ERROR: " + e.getMessage() + ": " + tableName;
             }
-
-            int index = -1;
-            for(int i = 3; i< tokens.length; i++){
-                  if(tokens[i].equalsIgnoreCase("WHERE")){
-                        index = i;
-                        break;
-                  }
+      
+            // Parse the columns and values to be updated
+            String updatedColumn = tokens[3];
+            if (!table.getColumns().contains(updatedColumn)) {
+                return "ERROR: Column not found: " + updatedColumn;
             }
-            if(index == -1){
-                  return "ERROR: missing WHERE clause in UPDATE command";
+            if (!tokens[4].equals("=")) {
+                return "ERROR: Invalid assignment in SET clause";
             }
-
-            String[] setClause = tokens[3].split("=");
-            if(setClause.length!=2){
-                  return "ERROR: Invalid Syntax in SET clause";
-            }
-            String columnToUpdate = setClause[0].trim();
-            String newValStr = setClause[1].trim();
-            Object newVal = parseValue(newValStr);
-
-            if(!table.getColumns().contains(columnToUpdate)){
-                  return "ERROR: Column not found: " + columnToUpdate;
-            }
-
+            String updatedValue = tokens[5];
+    
+            // Check if there's a WHERE clause
             List<String[]> whereClauseConditions = new ArrayList<>();
             List<Boolean> andOrConditions = new ArrayList<>();
-            for (int i = index + 1; i < tokens.length; i++) {
-                  if (tokens[i].equalsIgnoreCase("AND")) {
-                      andOrConditions.add(true);
-                  } else if (tokens[i].equalsIgnoreCase("OR")) {
-                      andOrConditions.add(false);
-                  } else if (isOperator(tokens[i])) {
-                      String column = tokens[i - 1];
-                      if (!table.getColumns().contains(column)) {
-                          return "ERROR: Column not found: " + column;
-                      }
-                      String operator = tokens[i];
-                      String value = tokens[i + 1];
-                      whereClauseConditions.add(new String[] { column, operator, value });
-                      i++; // Skip the value
-                  }
-            }
-            Set<Map<String, Object>> matchingRows = evaluateWhereCondition(whereClauseConditions.get(0), table);
-            for (int i = 1; i < whereClauseConditions.size(); i++) {
-                Set<Map<String, Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
-                if (andOrConditions.get(i - 1)) {
-                    matchingRows.retainAll(newRows); // AND condition
-                } else {
-                    matchingRows.addAll(newRows); // OR condition
+          
+            // Parse WHERE clause conditions
+            if (tokens.length > 6 && tokens[6].equalsIgnoreCase("WHERE")) {
+                for (int i = 7; i < tokens.length; i++) {
+                    if (tokens[i].equalsIgnoreCase("AND")) {
+                        // Store True for AND
+                        andOrConditions.add(true);
+                    } else if (tokens[i].equalsIgnoreCase("OR")) {
+                        // Store False for OR
+                        andOrConditions.add(false);
+                    } else if (isOperator(tokens[i])) {
+                        // Add condition with operator (column, operator, value)
+                        String column = tokens[i - 1];
+                        if (!table.getColumns().contains(column)) {
+                            return "ERROR: Column not found: " + column;
+                        }
+                        String operator = tokens[i];
+                        String value = tokens[i + 1];
+                        whereClauseConditions.add(new String[] {column, operator, value});
+                        i += 1; // Skip the value since it has been processed
+                    }
                 }
             }
-            int updatedRowCount = 0;
-            for (Map<String, Object> row : matchingRows) {
-                  row.put(columnToUpdate, newVal); // Update the column with the new value
-                  updatedRowCount++;
+    
+            // Get rows that satisfy the WHERE clause
+            Set<String> rowsToUpdate;
+            if (tokens.length == 6) {
+                // No WHERE clause: update all rows
+                rowsToUpdate = table.getPrimaryKeyMap().keySet();
+            } else {
+                rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
+                for (int i = 1; i < whereClauseConditions.size(); i++) {
+                    Set<String> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+                    if (andOrConditions.get(i - 1)) {
+                        rowsToUpdate.retainAll(newRows);
+                    } else {
+                        rowsToUpdate.addAll(newRows);
+                    }
+                }
             }
-
-            return updatedRowCount + " row(s) updated in " + tableName;
+    
+            TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
+            // Update the rows
+            for (String primaryKey : rowsToUpdate) {
+                Map<String, String> row = table.getPrimaryKeyMap().get(primaryKey);
+                // Remove id from previous key
+                columnMap.get(row.get(updatedColumn)).remove(primaryKey);
+                // Update the row with the new value
+                row.put(updatedColumn, updatedValue);
+            }
+            if (columnMap.containsKey(updatedValue)) {
+                columnMap.get(updatedValue).addAll(rowsToUpdate);
+            } else {
+                columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
+            }
+        
+            return rowsToUpdate.size() + " row(s) updated in " + tableName;
       }
 
       public String delete(String[] tokens) {
