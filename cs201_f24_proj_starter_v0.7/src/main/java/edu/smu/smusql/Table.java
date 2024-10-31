@@ -91,15 +91,12 @@ public class Table {
                 TreeMap<String, List<String>> treeMap = columnRedBlackTrees.get(column);
             
                 // Check if the value already has a list in the TreeMap
-                if (treeMap.containsKey(value)) {
-                    // If the list exists, add the primaryKeyValue to it
-                    treeMap.get(value).add(primaryKeyValue);
-                } else {
-                    // If the list does not exist, create a new list, add the primaryKeyValue, and put it in the TreeMap
-                    List<String> list = new ArrayList<>();
-                    list.add(primaryKeyValue);
-                    treeMap.put(value, list);
+                if (!treeMap.containsKey(value)) {
+                    // If the list does not exist, create a new list and put it to the TreeMap
+                    treeMap.put(value, new ArrayList<>());
                 }
+                // Add the primaryKeyValue to the list
+                treeMap.get(value).add(primaryKeyValue);
             }
         }
     }
