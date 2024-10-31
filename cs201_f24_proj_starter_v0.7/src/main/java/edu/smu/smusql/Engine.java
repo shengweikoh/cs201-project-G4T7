@@ -1,6 +1,13 @@
 package edu.smu.smusql;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class Engine {
     private Database database = new Database();
@@ -314,43 +321,78 @@ public class Engine {
         Set<String> matchingRows = new TreeSet<>();
         
         // Assume we are dealing with TreeMap that stores keys as Strings
-        TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
-        if (columnTreeMap == null) {
-            throw new IllegalArgumentException("Column not found: " + column);
-        }
-        System.out.println(columnTreeMap.toString());
+        //TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
+        // if (columnTreeMap == null) {
+        //     throw new IllegalArgumentException("Column not found: " + column);
+        // }
+        // System.out.println(columnTreeMap.toString());
     
         // Handle different operators
-        switch (operator) {
-            case "=":
-                // Exact match
-                List<String> exactMatches = columnTreeMap.get(valueStr); // Use the original string key for exact match
-                if (exactMatches != null) {
-                    matchingRows.addAll(exactMatches);
-                }
-                break;
-            case ">":
-            case ">=":
-            case "<":
-            case "<=":
-                // For range queries, we need to convert the String keys to the correct type for comparison
-                SortedMap<String, List<String>> subMap;
-                if (operator.equals(">")) {
-                    subMap = columnTreeMap.tailMap(valueStr, false); // Get all values greater than valueStr
-                } else if (operator.equals(">=")) {
-                    subMap = columnTreeMap.tailMap(valueStr, true);  // Get all values greater than or equal to valueStr
-                } else if (operator.equals("<")) {
-                    subMap = columnTreeMap.headMap(valueStr, false); // Get all values less than valueStr
-                } else {
-                    subMap = columnTreeMap.headMap(valueStr, true);  // Get all values less than or equal to valueStr
-                }
+        if (table.useBTree()) {
+            // Use BTree indexing if enabled
+            BTree<String> bTree = table.getColumnBTree(column);
+            if (bTree == null) {
+                throw new IllegalArgumentException("Column not found: " + column);
+            }
     
-                for (List<String> rows : subMap.values()) {
-                    matchingRows.addAll(rows);
-                }
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported operator: " + operator);
+            // Handle different operators for BTree
+            switch (operator) {
+                case "=":
+                    // Exact match in BTree
+                    List<String> exactMatches = bTree.search(valueStr);
+                    if (exactMatches != null) {
+                        matchingRows.addAll(exactMatches);  // Add all primary key references directly
+                    }
+                    break;
+                case ">":
+                case ">=":
+                case "<":
+                case "<=":
+                    // For range queries in BTree, create a custom range search
+                    List<String> rangeMatches = bTree.rangeSearch(valueStr, operator);
+                    if (rangeMatches != null) {
+                        matchingRows.addAll(rangeMatches);  // Add all primary key references directly
+                    }
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported operator: " + operator);
+            }
+        } else {
+            // Use TreeMap (Red-Black Tree) indexing if BTree is not used
+            TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
+            if (columnTreeMap == null) {
+                throw new IllegalArgumentException("Column not found: " + column);
+            }
+    
+            // Handle different operators for TreeMap
+            switch (operator) {
+                case "=":
+                    List<String> exactMatches = columnTreeMap.get(valueStr);
+                    if (exactMatches != null) {
+                        matchingRows.addAll(exactMatches);
+                    }
+                    break;
+                case ">":
+                case ">=":
+                case "<":
+                case "<=":
+                    SortedMap<String, List<String>> subMap;
+                    if (operator.equals(">")) {
+                        subMap = columnTreeMap.tailMap(valueStr, false);
+                    } else if (operator.equals(">=")) {
+                        subMap = columnTreeMap.tailMap(valueStr, true);
+                    } else if (operator.equals("<")) {
+                        subMap = columnTreeMap.headMap(valueStr, false);
+                    } else {
+                        subMap = columnTreeMap.headMap(valueStr, true);
+                    }
+                    for (List<String> rows : subMap.values()) {
+                        matchingRows.addAll(rows);
+                    }
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unsupported operator: " + operator);
+            }
         }
     
         return matchingRows;

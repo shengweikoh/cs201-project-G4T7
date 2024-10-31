@@ -1,6 +1,12 @@
 package edu.smu.smusql;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 public class Table {
     private final String tableName;
@@ -19,7 +25,7 @@ public class Table {
     public Table(String tableName, List<String> columns, boolean useBTree) {
         this.tableName = tableName;
         this.primaryKey = columns.get(0); // The first column is used as the primary key
-        this.useBTree = useBTree;
+        this.useBTree = true;
 
         // Validate that columns do not contain duplicates
         Set<String> columnSet = new HashSet<>(columns);
@@ -31,7 +37,7 @@ public class Table {
         this.primaryKeyMap = new HashMap<>();
 
         // Initialize appropriate index structures
-        if (useBTree) {
+        if (this.useBTree) {
             this.columnBTrees = new HashMap<>();
             for (String column : columns) {
                 columnBTrees.put(column, new BTree<>(3)); // Example: B-tree with minimum degree 3
@@ -46,6 +52,9 @@ public class Table {
 
     // Get the TreeMap for a specific column for Red-Black tree indexing
     public TreeMap<String, List<String>> getColumnTreeMap(String column) {
+        if (columnRedBlackTrees == null) {
+            throw new IllegalStateException("TreeMap indexing is not enabled for this table.");
+        }
         if (!columns.contains(column)) {
             throw new IllegalArgumentException("Column not found: " + column);
         }
@@ -78,28 +87,33 @@ public class Table {
         primaryKeyMap.put(primaryKeyValue, row);
 
         // Insert into the appropriate data structure for range queries
-        if (useBTree) {
-            for (int i = 0; i < columns.size(); i++) {
-                String column = columns.get(i);
-                String value = row.get(column).toString();
-                // columnBTrees.get(column).insert(value, row); // Store the row in the BTree
+        if (this.useBTree) {
+            for(String column: columns){
+                String value = row.get(column);
+                BTree<String> bTree = columnBTrees.get(column);
+                if(bTree != null){
+                    bTree.insert(value,primaryKeyValue);// inserting the primary key reference columnval:reference(pointing to the row)
+                }
             }
         } else {
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
                 String value = row.get(column).toString(); // Store value as String
                 TreeMap<String, List<String>> treeMap = columnRedBlackTrees.get(column);
+                //insert primary key reference in Treemap
+                treeMap.computeIfAbsent(value, k -> new ArrayList<>()).add(primaryKeyValue);
+
             
                 // Check if the value already has a list in the TreeMap
-                if (treeMap.containsKey(value)) {
-                    // If the list exists, add the primaryKeyValue to it
-                    treeMap.get(value).add(primaryKeyValue);
-                } else {
-                    // If the list does not exist, create a new list, add the primaryKeyValue, and put it in the TreeMap
-                    List<String> list = new ArrayList<>();
-                    list.add(primaryKeyValue);
-                    treeMap.put(value, list);
-                }
+                // if (treeMap.containsKey(value)) {
+                //     // If the list exists, add the primaryKeyValue to it
+                //     treeMap.get(value).add(primaryKeyValue);
+                // } else {
+                //     // If the list does not exist, create a new list, add the primaryKeyValue, and put it in the TreeMap
+                //     List<String> list = new ArrayList<>();
+                //     list.add(primaryKeyValue);
+                //     treeMap.put(value, list);
+                // }
             }
         }
     }
@@ -119,6 +133,18 @@ public class Table {
 
     public List<String> getColumns() {
         return columns;
+    }
+    public boolean useBTree() {
+        return useBTree;
+    }    
+    public BTree<String> getColumnBTree(String column) {
+        if (columnBTrees == null) {
+            throw new IllegalStateException("BTree indexing is not enabled for this table.");
+        }
+        if (!columns.contains(column)) {
+            throw new IllegalArgumentException("Column not found: " + column);
+        }
+        return columnBTrees.get(column);
     }
 
     @Override
