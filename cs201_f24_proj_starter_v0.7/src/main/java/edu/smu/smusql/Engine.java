@@ -113,22 +113,25 @@ public class Engine {
                     i += 1; // Skip the value since it has been processed
                 }
             }
-        } else {
-            return "ERROR: Invalid UPDATE syntax";
         }
-  
+
         // Get rows that satisfy the WHERE clause
         Set<String> rowsToUpdate;
-        rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
-        for (int i = 1; i < whereClauseConditions.size(); i++) {
-            Set<String> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
-            if (andOrConditions.get(i - 1)) {
-                rowsToUpdate.retainAll(newRows);
-            } else {
-                rowsToUpdate.addAll(newRows);
+        if (tokens.length == 6) {
+            // No WHERE clause: update all rows
+            rowsToUpdate = table.getPrimaryKeyMap().keySet();
+        } else {
+            rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
+            for (int i = 1; i < whereClauseConditions.size(); i++) {
+                Set<String> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+                if (andOrConditions.get(i - 1)) {
+                    rowsToUpdate.retainAll(newRows);
+                } else {
+                    rowsToUpdate.addAll(newRows);
+                }
             }
         }
-  
+
         TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
         // Update the rows
         for (String primaryKey : rowsToUpdate) {
@@ -281,7 +284,6 @@ public class Engine {
                     i += 1;
                 }
             }
-        
         }
 
         // Evaluate WHERE conditions
