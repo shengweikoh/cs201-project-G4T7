@@ -29,7 +29,7 @@ public class UpdateTest {
         String updateQuery = "UPDATE student SET age = 21 WHERE id = 2";
         String result = engine.executeSQL(updateQuery);
 
-        assertEquals("1 row(s) updated in student", result);
+        assertEquals("Table student updated. 1 row(s) updated in student", result);
 
         // Verify that Jane Smith's age is now updated
         String selectQuery = "SELECT * FROM student WHERE id = 2";
@@ -44,7 +44,7 @@ public class UpdateTest {
         String updateQuery = "UPDATE student SET age = 23 WHERE gpa < 3.8";
         String result = engine.executeSQL(updateQuery);
 
-        assertEquals("2 row(s) updated in student", result);
+        assertEquals("Table student updated. 2 row(s) updated in student", result);
 
         // Verify that Mark Davis and John Doe's ages are updated
         String selectQuery = "SELECT * FROM student WHERE age = 23";
@@ -60,7 +60,7 @@ public class UpdateTest {
         String updateQuery = "UPDATE student SET name = 'Updated' WHERE gpa > 3.5 AND age < 22";
         String result = engine.executeSQL(updateQuery);
 
-        assertEquals("1 row(s) updated in student", result);
+        assertEquals("Table student updated. 1 row(s) affected.", result);
 
         // Verify that only Jane Smith's name is updated
         String selectQuery = "SELECT * FROM student WHERE id = 2";
@@ -75,7 +75,7 @@ public class UpdateTest {
         String updateQuery = "UPDATE student SET gpa = 3.0 WHERE age = 20 OR gpa = 3.2";
         String result = engine.executeSQL(updateQuery);
 
-        assertEquals("2 row(s) updated in student", result);
+        assertEquals("Table student updated. 2 row(s) affected.", result);
 
         // Verify that John Doe and Mark Davis' gpa values are updated
         String selectQuery = "SELECT * FROM student WHERE gpa = 3.0";

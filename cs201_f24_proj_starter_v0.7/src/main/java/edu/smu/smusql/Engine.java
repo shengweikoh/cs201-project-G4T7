@@ -150,7 +150,7 @@ public class Engine {
             columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
         }
 
-        return "Table " + tableName + " updated." + rowsToUpdate.size() + " row(s) affected.";
+        return "Table " + tableName + " updated. " + rowsToUpdate.size() + " row(s) affected.";
     }
 
     public String delete(String[] tokens) {
