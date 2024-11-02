@@ -67,171 +67,174 @@ public class Engine {
       public String update(String[] tokens) {
             // Check syntax
             if (tokens.length < 4 || !tokens[2].equalsIgnoreCase("SET")) {
-                return "ERROR: Invalid UPDATE syntax";
+                  return "ERROR: Invalid UPDATE syntax";
             }
-        
+
             String tableName = tokens[1];
-        
+
             Table table;
             try {
-                table = database.getTable(tableName);
+                  table = database.getTable(tableName);
             } catch (IllegalArgumentException e) {
-                return "ERROR: " + e.getMessage() + ": " + tableName;
+                  return "ERROR: " + e.getMessage() + ": " + tableName;
             }
-        
+
             // Parse the columns and values to be updated
             Map<String, String> updatedColumns = new HashMap<>();
-        
+
             int i = 3; // Start after 'SET'
             while (i < tokens.length && !tokens[i].equalsIgnoreCase("WHERE")) {
-                // Parse column name
-                String columnName = tokens[i];
-                if (!table.getColumns().contains(columnName)) {
-                    return "ERROR: Column not found: " + columnName;
-                }
-                i++;
-        
-                // Expect '='
-                if (i >= tokens.length || !tokens[i].equals("=")) {
-                    return "ERROR: Invalid assignment in SET clause";
-                }
-                i++;
-        
-                // Parse value, which may include tokens with spaces or commas
-                if (i >= tokens.length) {
-                    return "ERROR: Missing value in SET clause";
-                }
-                StringBuilder valueBuilder = new StringBuilder();
-                boolean inQuotes = false;
-                while (i < tokens.length && (inQuotes || (!tokens[i].equals(",") && !tokens[i].equalsIgnoreCase("WHERE")))) {
-                    String token = tokens[i];
-                    if (token.startsWith("'")) {
-                        inQuotes = true;
-                        if (token.endsWith("'") && token.length() > 1) {
-                            inQuotes = false;
-                        }
-                    } else if (token.endsWith("'")) {
-                        inQuotes = false;
-                    }
-                    valueBuilder.append(token).append(" ");
-                    i++;
-                }
-                String value = valueBuilder.toString().trim();
-                value = stripQuotes(value);
-        
-                updatedColumns.put(columnName, value);
-        
-                // Skip comma if present
-                if (i < tokens.length && tokens[i].equals(",")) {
-                    i++;
-                }
+                  // Parse column name
+                  String columnName = tokens[i];
+                  if (columnName.endsWith(",")) {
+                        columnName = columnName.substring(0, columnName.length() - 1);
+                  }
+                  if (!table.getColumns().contains(columnName)) {
+                        return "ERROR: Column not found: " + columnName;
+                  }
+                  i++;
+
+                  // Expect '='
+                  if (i >= tokens.length || !tokens[i].equals("=")) {
+                        return "ERROR: Invalid assignment in SET clause";
+                  }
+                  i++;
+
+                  // Parse value
+                  if (i >= tokens.length) {
+                        return "ERROR: Missing value in SET clause";
+                  }
+                  String value = tokens[i];
+
+                  // Check if value ends with a comma
+                  boolean hasComma = false;
+                  if (value.endsWith(",")) {
+                        hasComma = true;
+                        value = value.substring(0, value.length() - 1);
+                  }
+
+                  value = stripQuotes(value);
+
+                  updatedColumns.put(columnName, value);
+
+                  i++;
+
+                  // If value had a comma, we continue to next column
+                  if (hasComma) {
+                        continue;
+                  }
+
+                  // If next token is a comma, skip it
+                  if (i < tokens.length && tokens[i].equals(",")) {
+                        i++;
+                  }
             }
-        
+
             // Parse WHERE clause conditions
             List<String[]> whereClauseConditions = new ArrayList<>();
             List<Boolean> andOrConditions = new ArrayList<>();
-        
+
             if (i < tokens.length && tokens[i].equalsIgnoreCase("WHERE")) {
-                i++; // Move past 'WHERE'
-                while (i < tokens.length) {
-                    if (tokens[i].equalsIgnoreCase("AND")) {
-                        andOrConditions.add(true);
-                        i++;
-                    } else if (tokens[i].equalsIgnoreCase("OR")) {
-                        andOrConditions.add(false);
-                        i++;
-                    } else {
-                        // Parse column name
-                        if (i >= tokens.length) {
-                            return "ERROR: Missing column in WHERE clause";
+                  i++; // Move past 'WHERE'
+                  while (i < tokens.length) {
+                        if (tokens[i].equalsIgnoreCase("AND")) {
+                              andOrConditions.add(true);
+                              i++;
+                        } else if (tokens[i].equalsIgnoreCase("OR")) {
+                              andOrConditions.add(false);
+                              i++;
+                        } else {
+                              // Parse column name
+                              if (i >= tokens.length) {
+                                    return "ERROR: Missing column in WHERE clause";
+                              }
+                              String column = tokens[i];
+                              if (!table.getColumns().contains(column)) {
+                                    return "ERROR: Column not found: " + column;
+                              }
+                              i++;
+
+                              // Parse operator
+                              if (i >= tokens.length || !isOperator(tokens[i])) {
+                                    return "ERROR: Invalid operator in WHERE clause";
+                              }
+                              String operator = tokens[i];
+                              i++;
+
+                              // Parse value, which may include tokens with spaces
+                              if (i >= tokens.length) {
+                                    return "ERROR: Missing value in WHERE clause";
+                              }
+                              StringBuilder valueBuilder = new StringBuilder();
+                              boolean inQuotes = false;
+                              while (i < tokens.length && (inQuotes || (!tokens[i].equalsIgnoreCase("AND")
+                                          && !tokens[i].equalsIgnoreCase("OR")))) {
+                                    String token = tokens[i];
+                                    if (token.startsWith("'")) {
+                                          inQuotes = true;
+                                          if (token.endsWith("'") && token.length() > 1) {
+                                                inQuotes = false;
+                                          }
+                                    } else if (token.endsWith("'")) {
+                                          inQuotes = false;
+                                    }
+                                    valueBuilder.append(token).append(" ");
+                                    i++;
+                              }
+                              String value = valueBuilder.toString().trim();
+                              value = stripQuotes(value);
+
+                              whereClauseConditions.add(new String[] { column, operator, value });
                         }
-                        String column = tokens[i];
-                        if (!table.getColumns().contains(column)) {
-                            return "ERROR: Column not found: " + column;
-                        }
-                        i++;
-        
-                        // Parse operator
-                        if (i >= tokens.length || !isOperator(tokens[i])) {
-                            return "ERROR: Invalid operator in WHERE clause";
-                        }
-                        String operator = tokens[i];
-                        i++;
-        
-                        // Parse value, which may include tokens with spaces
-                        if (i >= tokens.length) {
-                            return "ERROR: Missing value in WHERE clause";
-                        }
-                        StringBuilder valueBuilder = new StringBuilder();
-                        boolean inQuotes = false;
-                        while (i < tokens.length && (inQuotes || (!tokens[i].equalsIgnoreCase("AND") && !tokens[i].equalsIgnoreCase("OR")))) {
-                            String token = tokens[i];
-                            if (token.startsWith("'")) {
-                                inQuotes = true;
-                                if (token.endsWith("'") && token.length() > 1) {
-                                    inQuotes = false;
-                                }
-                            } else if (token.endsWith("'")) {
-                                inQuotes = false;
-                            }
-                            valueBuilder.append(token).append(" ");
-                            i++;
-                        }
-                        String value = valueBuilder.toString().trim();
-                        value = stripQuotes(value);
-        
-                        whereClauseConditions.add(new String[] { column, operator, value });
-                    }
-                }
+                  }
             }
-        
+
             // Get rows that satisfy the WHERE clause
             Set<String> rowsToUpdate;
             if (whereClauseConditions.isEmpty()) {
-                // No WHERE clause: update all rows
-                rowsToUpdate = new HashSet<>(table.getPrimaryKeyMap().keySet());
+                  // No WHERE clause: update all rows
+                  rowsToUpdate = new HashSet<>(table.getPrimaryKeyMap().keySet());
             } else {
-                rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
-                for (int j = 1; j < whereClauseConditions.size(); j++) {
-                    Set<String> newRows = evaluateWhereCondition(whereClauseConditions.get(j), table);
-                    if (andOrConditions.get(j - 1)) {
-                        rowsToUpdate.retainAll(newRows);
-                    } else {
-                        rowsToUpdate.addAll(newRows);
-                    }
-                }
+                  rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
+                  for (int j = 1; j < whereClauseConditions.size(); j++) {
+                        Set<String> newRows = evaluateWhereCondition(whereClauseConditions.get(j), table);
+                        if (andOrConditions.get(j - 1)) {
+                              rowsToUpdate.retainAll(newRows);
+                        } else {
+                              rowsToUpdate.addAll(newRows);
+                        }
+                  }
             }
-        
+
             Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();
-        
+
             // Update each specified column
             for (String updatedColumn : updatedColumns.keySet()) {
-                String updatedValue = updatedColumns.get(updatedColumn);
-                TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
-        
-                for (String primaryKey : rowsToUpdate) {
-                    Map<String, String> row = rows.get(primaryKey);
-                    String oldValue = row.get(updatedColumn);
-        
-                    // Remove primaryKey from old value in columnMap
-                    if (columnMap.containsKey(oldValue)) {
-                        columnMap.get(oldValue).remove(primaryKey);
-                        if (columnMap.get(oldValue).isEmpty()) {
-                            columnMap.remove(oldValue);
+                  String updatedValue = updatedColumns.get(updatedColumn);
+                  TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
+
+                  for (String primaryKey : rowsToUpdate) {
+                        Map<String, String> row = rows.get(primaryKey);
+                        String oldValue = row.get(updatedColumn);
+
+                        // Remove primaryKey from old value in columnMap
+                        if (columnMap.containsKey(oldValue)) {
+                              columnMap.get(oldValue).remove(primaryKey);
+                              if (columnMap.get(oldValue).isEmpty()) {
+                                    columnMap.remove(oldValue);
+                              }
                         }
-                    }
-        
-                    // Update the row with the new value
-                    row.put(updatedColumn, updatedValue);
-        
-                    // Add primaryKey to new value in columnMap
-                    columnMap.computeIfAbsent(updatedValue, k -> new ArrayList<>()).add(primaryKey);
-                }
+
+                        // Update the row with the new value
+                        row.put(updatedColumn, updatedValue);
+
+                        // Add primaryKey to new value in columnMap
+                        columnMap.computeIfAbsent(updatedValue, k -> new ArrayList<>()).add(primaryKey);
+                  }
             }
-        
+
             return rowsToUpdate.size() + " row(s) updated in " + tableName;
-        }
-        
+      }
 
       public String delete(String[] tokens) {
             // Check syntax
@@ -436,10 +439,10 @@ public class Engine {
       private String stripQuotes(String value) {
             value = value.trim();
             if (value.startsWith("'") && value.endsWith("'") && value.length() >= 2) {
-                return value.substring(1, value.length() - 1);
+                  return value.substring(1, value.length() - 1);
             }
             return value;
-      }        
+      }
 
       private String queryBetweenParentheses(String[] tokens, int startIndex) {
             StringBuilder result = new StringBuilder();
