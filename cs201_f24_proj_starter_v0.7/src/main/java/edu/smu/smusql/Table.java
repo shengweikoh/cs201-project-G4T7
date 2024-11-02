@@ -25,7 +25,7 @@ public class Table {
     public Table(String tableName, List<String> columns, boolean useBTree) {
         this.tableName = tableName;
         this.primaryKey = columns.get(0); // The first column is used as the primary key
-        this.useBTree = useBTree;
+        this.useBTree = false;
 
         // Validate that columns do not contain duplicates
         Set<String> columnSet = new HashSet<>(columns);
@@ -33,7 +33,7 @@ public class Table {
             throw new IllegalArgumentException("Duplicate column names found");
         }
 
-        this.columns = new ArrayList<>(columns); // Copy the columns list
+        this.columns = new ArrayList<>(columns);
         this.primaryKeyMap = new HashMap<>();
 
         // Initialize appropriate index structures
@@ -58,6 +58,9 @@ public class Table {
         if (!columns.contains(column)) {
             throw new IllegalArgumentException("Column not found: " + column);
         }
+        if (columnRedBlackTrees == null) {
+            throw new IllegalStateException("TreeMap-based indexing is not enabled for this table.");
+        }
         return columnRedBlackTrees.get(column);
     }
 
@@ -79,7 +82,7 @@ public class Table {
         // Convert all values to Strings within this method
         Map<String, String> row = new HashMap<>();
         for (int i = 0; i < columns.size(); i++) {
-            String value = values.get(i).toString().trim();  // Convert each value to String and trim whitespace
+            String value = values.get(i).toString().trim(); // Convert each value to String and trim whitespace
             row.put(columns.get(i), value);
         }
         
@@ -141,6 +144,13 @@ public class Table {
         return columnBTrees.get(column);
     }
 
+    public BTree<String> getColumnBTree(String column) {
+        return columnBTrees.get(column);
+    }
+
+    public boolean useBTree() {
+        return useBTree;
+    }
     @Override
     public String toString() {
         return "Table{" +

@@ -413,6 +413,7 @@ public class Engine {
                 case "<":
                 case "<=":
                     SortedMap<String, List<String>> subMap;
+                
                     if (operator.equals(">")) {
                         subMap = columnTreeMap.tailMap(valueStr, false);
                     } else if (operator.equals(">=")) {
@@ -422,6 +423,7 @@ public class Engine {
                     } else {
                         subMap = columnTreeMap.headMap(valueStr, true);
                     }
+                
                     for (List<String> rows : subMap.values()) {
                         matchingRows.addAll(rows);
                     }
