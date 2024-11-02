@@ -66,19 +66,19 @@ public class SelectTest {
         assertEquals(expected, result);
     }
 
-    // @Test
-    // public void testSelectWithWhereLessThan() {
-    //     // SELECT with a WHERE clause (age < 21)
-    //     String selectWhereQuery = "SELECT * FROM student WHERE age < 21";
-    //     String result = engine.executeSQL(selectWhereQuery);
+    @Test
+    public void testSelectWithWhereLessThan() {
+        // SELECT with a WHERE clause (age < 21)
+        String selectWhereQuery = "SELECT * FROM student WHERE age < 21";
+        String result = engine.executeSQL(selectWhereQuery);
 
-    //     // Check that the correct rows are returned, with names enclosed in single quotes
-    //     String expected = "id\tname\tgpa\tage\n" +
-    //                       "1\t'John Doe'\t3.5\t20\n" +
-    //                       "2\t'Jane Smith'\t3.9\t19\n";
+        // Check that the correct rows are returned, with names enclosed in single quotes
+        String expected = "id\tname\tgpa\tage\n" +
+                          "1\t'John Doe'\t3.5\t20\n" +
+                          "2\t'Jane Smith'\t3.9\t19\n";
 
-    //     assertEquals(expected, result);
-    // }
+        assertEquals(expected, result);
+    }
 
     @Test
     public void testSelectWithWhereAndCondition() {
@@ -108,7 +108,7 @@ public class SelectTest {
         String invalidTableQuery = "SELECT * FROM nonExistentTable";
         String result = engine.executeSQL(invalidTableQuery);
 
-        assertEquals("ERROR: No such table", result);
+        assertEquals("ERROR: No such table: nonExistentTable", result);
     }
 
     @Test

@@ -28,12 +28,12 @@ class InsertTest {
         // System.out.println("---INSERT COMMAND TEST---\n");
         // Execute insert command
         String result = engine.executeSQL("INSERT INTO Users VALUES (1, Alice, 30)");
-        assertEquals("Insertion Successful", result);
+        assertEquals("Row inserted into Users", result);
 
         // Retrieve the table and check the inserted row
         Table usersTable = database.getTable("Users");
         // System.out.println(usersTable);
-        Map<String, Object> insertedRow = usersTable.getRowByPrimaryKey("1");
+        Map<String, String> insertedRow = usersTable.getRowByPrimaryKey("1");
 
         // System.out.println("Inserted row: " + insertedRow + "\n");
         assertNotNull(insertedRow, "Inserted row should not be null");
@@ -53,7 +53,7 @@ class InsertTest {
     void testInsertDuplicatePrimaryKey() {
         // First insert
         String result1 = engine.executeSQL("INSERT INTO Users VALUES (1, Alice, 30)");
-        assertEquals("Insertion Successful", result1);
+        assertEquals("Row inserted into Users", result1);
 
         // Attempt to insert with the same primary key
         String result2 = engine.executeSQL("INSERT INTO Users VALUES (1, 'Charlie', 25)");
@@ -61,23 +61,10 @@ class InsertTest {
         assertTrue(result2.contains("Duplicate primary key"), "Should specify the error reason");
     }
 
-/* THESE TWO TESTS DOESN'T WORK I DON'T KNOW HOW TO FIX, HELP PLS  */
-
-    // @Test
-    // void testInsertWithNullValues() {
-    //     // Attempt to insert with null values
-    //     String result = engine.executeSQL("INSERT INTO Users VALUES (3, null, 28)");
-    //     System.out.println("Insert result: " + result + "\n");  // Debugging output
-    //     assertTrue(result.startsWith("ERROR:"), "Should return an error for null values");
-    //     assertTrue(result.contains("Null values are not allowed"), "Should specify the error reason");
-    // }
-
-    // @Test
-    // void testInsertWithNonexistentTable() {
-    //     // Attempt to insert into a nonexistent table
-    //     String result = engine.executeSQL("INSERT INTO NonexistentTable VALUES (4, 'David', 22)");
-    //     System.out.println("---NONEXISTENT TABLE---");
-    //     System.out.println("Test result: " + result);
-    //     assertEquals("ERROR: table NonexistentTable not found.", result);
-    // }
+    @Test
+    void testInsertWithNonexistentTable() {
+        // Attempt to insert into a nonexistent table
+        String result = engine.executeSQL("INSERT INTO NonexistentTable VALUES (4, 'David', 22)");
+        assertEquals("ERROR: No such table: NonexistentTable", result);
+    }
 }
