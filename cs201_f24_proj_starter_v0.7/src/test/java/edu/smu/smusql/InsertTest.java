@@ -65,6 +65,6 @@ class InsertTest {
     void testInsertWithNonexistentTable() {
         // Attempt to insert into a nonexistent table
         String result = engine.executeSQL("INSERT INTO NonexistentTable VALUES (4, 'David', 22)");
-        assertEquals("ERROR: Table not found", result);
+        assertEquals("ERROR: No such table: NonexistentTable", result);
     }
 }
