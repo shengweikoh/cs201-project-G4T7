@@ -16,7 +16,7 @@ public class Table {
 
     // HashMap for exact primary key lookups
     private Map<String, Map<String, String>> primaryKeyMap;
-    
+
     // Data structures for range queries on other columns
     private Map<String, BTree<String>> columnBTrees; // For B-tree-based indexing
     private Map<String, TreeMap<String, List<String>>> columnRedBlackTrees; // For Red-Black tree indexing
@@ -85,17 +85,18 @@ public class Table {
             String value = values.get(i).toString().trim(); // Convert each value to String and trim whitespace
             row.put(columns.get(i), value);
         }
-        
+
         // Insert the row into primaryKeyMap with a generated row ID
         primaryKeyMap.put(primaryKeyValue, row);
 
         // Insert into the appropriate data structure for range queries
         if (this.useBTree) {
-            for(String column: columns){
+            for (String column : columns) {
                 String value = row.get(column);
                 BTree<String> bTree = columnBTrees.get(column);
-                if(bTree != null){
-                    bTree.insert(value,primaryKeyValue);// inserting the primary key reference columnval:reference(pointing to the row)
+                if (bTree != null) {
+                    bTree.insert(value, primaryKeyValue);// inserting the primary key reference
+                                                         // columnval:reference(pointing to the row)
                 }
             }
         } else {
@@ -103,7 +104,7 @@ public class Table {
                 String column = columns.get(i);
                 String value = row.get(column).toString(); // Store value as String
                 TreeMap<String, List<String>> treeMap = columnRedBlackTrees.get(column);
-            
+
                 // Check if the value already has a list in the TreeMap
                 if (!treeMap.containsKey(value)) {
                     // If the list does not exist, create a new list and put it to the TreeMap
@@ -131,9 +132,11 @@ public class Table {
     public List<String> getColumns() {
         return columns;
     }
+
     public boolean useBTree() {
         return useBTree;
-    }    
+    }
+
     public BTree<String> getColumnBTree(String column) {
         if (columnBTrees == null) {
             throw new IllegalStateException("BTree indexing is not enabled for this table.");
@@ -144,13 +147,6 @@ public class Table {
         return columnBTrees.get(column);
     }
 
-    public BTree<String> getColumnBTree(String column) {
-        return columnBTrees.get(column);
-    }
-
-    public boolean useBTree() {
-        return useBTree;
-    }
     @Override
     public String toString() {
         return "Table{" +

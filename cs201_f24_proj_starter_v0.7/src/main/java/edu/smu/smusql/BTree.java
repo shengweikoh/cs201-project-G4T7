@@ -64,7 +64,7 @@ class BTreeNode<T extends Comparable<T>> {
         }
 
         // If `y` is not a leaf, move `t` children from `y` to `z`
-       
+
         if (!y.isLeaf) {
             for (int j = 0; j < t; j++) {
                 z.children.add(y.children.remove(t));
@@ -112,6 +112,7 @@ class BTreeNode<T extends Comparable<T>> {
             children.get(i).rangeQueryExclusive(lowerBound, upperBound, result);
         }
     }
+}
 
 public class BTree<T extends Comparable<T>> {
     private BTreeNode<T> root;
@@ -186,11 +187,5 @@ public class BTree<T extends Comparable<T>> {
             root.rangeQuery(lowerBound, upperBound, result);
         }
         return result;
-    }
-    public List<Map<String, Object>> search(T key) {
-        if (root != null) {
-            return root.search(key);
-        }
-        return null;
     }
 }
