@@ -45,15 +45,26 @@ class BTreeNode<T extends Comparable<T>> {
     }
 
     public void splitChild(int i, BTreeNode<T> y) {
+        // Create a new node z to store the second half of y
         BTreeNode<T> z = new BTreeNode<>(y.t, y.isLeaf);
-        z.keys = new ArrayList<>(y.keys.subList(t, 2 * t - 1));
-        z.values = new ArrayList<>(y.values.subList(t, 2 * t - 1));
-        if (!y.isLeaf) {
-            z.children = new ArrayList<>(y.children.subList(t, 2 * t));
+    
+        // Move the second half of y's keys and values to z
+        for (int j = 0; j < t - 1; j++) {
+            z.keys.add(y.keys.remove(t));  // Move the key to z
+            z.values.add(y.values.remove(t));  // Move the value to z
         }
-        y.keys = new ArrayList<>(y.keys.subList(0, t - 1));
-        y.values = new ArrayList<>(y.values.subList(0, t - 1));
+    
+        // If y is not a leaf, move the second half of y's children to z
+        if (!y.isLeaf) {
+            for (int j = 0; j < t; j++) {
+                z.children.add(y.children.remove(t));
+            }
+        }
+    
+        // Insert z as a child of the current node
         children.add(i + 1, z);
+    
+        // Move the middle key and value of y up to the parent node (this node)
         keys.add(i, y.keys.remove(t - 1));
         values.add(i, y.values.remove(t - 1));
     }
@@ -74,9 +85,29 @@ class BTreeNode<T extends Comparable<T>> {
             children.get(i).rangeQuery(lowerBound, upperBound, result);
         }
     }
+
+    public List<Map<String, Object>> search(T key) {
+        int i = 0;
+    
+        // Find the first key greater than or equal to the key we are searching for
+        while (i < keys.size() && key.compareTo(keys.get(i)) > 0) {
+            i++;
+        }
+    
+        // If the found key is equal to the key, we return the associated value(s)
+        if (i < keys.size() && keys.get(i).compareTo(key) == 0) {
+            return List.of(values.get(i));
+        }
+
+        if (isLeaf) {
+            return null;
+        }
+    
+        return children.get(i).search(key);
+    }
+
 }
 
-// BTree class
 public class BTree<T extends Comparable<T>> {
     private BTreeNode<T> root;
     private int t;
@@ -108,6 +139,12 @@ public class BTree<T extends Comparable<T>> {
             root.rangeQuery(lowerBound, upperBound, result);
         }
         return result;
+    }
+    public List<Map<String, Object>> search(T key) {
+        if (root != null) {
+            return root.search(key);
+        }
+        return null;
     }
 }
 

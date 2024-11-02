@@ -6,7 +6,7 @@ public class Table {
     private final String tableName;
     private final List<String> columns;
     private final String primaryKey;
-    private final boolean useBTree;
+    private boolean useBTree; // set to true if wan to use btree
 
     // HashMap for exact primary key lookups
     private Map<String, Map<String, String>> primaryKeyMap;
@@ -19,7 +19,7 @@ public class Table {
     public Table(String tableName, List<String> columns, boolean useBTree) {
         this.tableName = tableName;
         this.primaryKey = columns.get(0); // The first column is used as the primary key
-        this.useBTree = useBTree;
+        this.useBTree = false;
 
         // Validate that columns do not contain duplicates
         Set<String> columnSet = new HashSet<>(columns);
@@ -27,20 +27,17 @@ public class Table {
             throw new IllegalArgumentException("Duplicate column names found");
         }
 
-        this.columns = new ArrayList<>(columns); // Copy the columns list
+        this.columns = new ArrayList<>(columns);
         this.primaryKeyMap = new HashMap<>();
 
-        // Initialize appropriate index structures
-        if (useBTree) {
-            this.columnBTrees = new HashMap<>();
-            for (String column : columns) {
-                columnBTrees.put(column, new BTree<>(3)); // Example: B-tree with minimum degree 3
-            }
-        } else {
-            this.columnRedBlackTrees = new HashMap<>();
-            for (String column : columns) {
-                columnRedBlackTrees.put(column, new TreeMap<>()); // TreeMap is a Red-Black tree
-            }
+        // Initialize both data structures, regardless of useBTree
+        this.columnBTrees = new HashMap<>();
+        this.columnRedBlackTrees = new HashMap<>();
+
+        // Populate each column with the appropriate structure
+        for (String column : columns) {
+            columnBTrees.put(column, new BTree<>(3)); // Initialize BTree with a minimum degree of 3
+            columnRedBlackTrees.put(column, new TreeMap<>()); // Initialize TreeMap (Red-Black Tree)
         }
     }
 
@@ -48,6 +45,9 @@ public class Table {
     public TreeMap<String, List<String>> getColumnTreeMap(String column) {
         if (!columns.contains(column)) {
             throw new IllegalArgumentException("Column not found: " + column);
+        }
+        if (columnRedBlackTrees == null) {
+            throw new IllegalStateException("TreeMap-based indexing is not enabled for this table.");
         }
         return columnRedBlackTrees.get(column);
     }
@@ -70,7 +70,7 @@ public class Table {
         // Convert all values to Strings within this method
         Map<String, String> row = new HashMap<>();
         for (int i = 0; i < columns.size(); i++) {
-            String value = values.get(i).toString().trim();  // Convert each value to String and trim whitespace
+            String value = values.get(i).toString().trim(); // Convert each value to String and trim whitespace
             row.put(columns.get(i), value);
         }
         
@@ -78,7 +78,7 @@ public class Table {
         primaryKeyMap.put(primaryKeyValue, row);
 
         // Insert into the appropriate data structure for range queries
-        if (useBTree) {
+        if (this.useBTree) {
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
                 String value = row.get(column).toString();
@@ -118,6 +118,13 @@ public class Table {
         return columns;
     }
 
+    public BTree<String> getColumnBTree(String column) {
+        return columnBTrees.get(column);
+    }
+
+    public boolean useBTree() {
+        return useBTree;
+    }
     @Override
     public String toString() {
         return "Table{" +
