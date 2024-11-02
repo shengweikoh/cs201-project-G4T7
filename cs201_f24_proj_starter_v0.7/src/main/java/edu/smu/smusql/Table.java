@@ -25,7 +25,7 @@ public class Table {
     public Table(String tableName, List<String> columns, boolean useBTree) {
         this.tableName = tableName;
         this.primaryKey = columns.get(0); // The first column is used as the primary key
-        this.useBTree = true;
+        this.useBTree = useBTree;
 
         // Validate that columns do not contain duplicates
         Set<String> columnSet = new HashSet<>(columns);
@@ -100,20 +100,14 @@ public class Table {
                 String column = columns.get(i);
                 String value = row.get(column).toString(); // Store value as String
                 TreeMap<String, List<String>> treeMap = columnRedBlackTrees.get(column);
-                //insert primary key reference in Treemap
-                treeMap.computeIfAbsent(value, k -> new ArrayList<>()).add(primaryKeyValue);
-
             
                 // Check if the value already has a list in the TreeMap
-                // if (treeMap.containsKey(value)) {
-                //     // If the list exists, add the primaryKeyValue to it
-                //     treeMap.get(value).add(primaryKeyValue);
-                // } else {
-                //     // If the list does not exist, create a new list, add the primaryKeyValue, and put it in the TreeMap
-                //     List<String> list = new ArrayList<>();
-                //     list.add(primaryKeyValue);
-                //     treeMap.put(value, list);
-                // }
+                if (!treeMap.containsKey(value)) {
+                    // If the list does not exist, create a new list and put it to the TreeMap
+                    treeMap.put(value, new ArrayList<>());
+                }
+                // Add the primaryKeyValue to the list
+                treeMap.get(value).add(primaryKeyValue);
             }
         }
     }
