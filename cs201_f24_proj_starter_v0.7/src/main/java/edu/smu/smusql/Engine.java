@@ -5,6 +5,7 @@ import java.util.*;
 public class Engine {
       private Database database = new Database();
       private Parser parser = new Parser();
+      private List<String> queryHistory = new ArrayList<>();
 
       public Database getDatabase() {
             return database;
@@ -13,6 +14,16 @@ public class Engine {
       public String executeSQL(String query) {
             String[] tokens = query.trim().split("\\s+");
             String command = tokens[0].toUpperCase();
+
+            // Save the typed query to history ("SELECT * FROM table WHERE column = value")
+            if (!command.equals("HISTORY") && !command.equals("EXECUTE") && !command.equals("CLEAR")) {
+                  queryHistory.add(query);
+            }
+
+            // If history reached 25 queries, remove the oldest query
+            if (queryHistory.size() > 25) {
+                  queryHistory.remove(0); // Remove the oldest entry
+            }
 
             switch (command) {
                   case "CREATE":
@@ -25,6 +36,12 @@ public class Engine {
                         return update(tokens);
                   case "DELETE":
                         return delete(tokens);
+                  case "EXECUTE":
+                        return executeHistory(tokens);
+                  case "CLEAR":
+                        return clearHistory(tokens);
+                  case "HISTORY":
+                        return showHistory();
                   default:
                         return "ERROR: Unknown command";
             }
@@ -432,6 +449,44 @@ public class Engine {
             database.createTable(tableName, columns, false); // Set to true if you want to use BTree
 
             return "Table " + tableName + " created";
+      }
+
+      public String showHistory() {
+            StringBuilder result = new StringBuilder();
+            int index = 1;
+            for (String q : queryHistory) {
+                  result.append(index).append(": ").append(q).append("\n");
+                  index++;
+            }
+            return result.toString();
+      }
+
+      // Method to execute a query from history
+      public String executeHistory(String[] tokens) {
+            if (tokens.length < 2) {
+                  return "ERROR: EXECUTE command requires an index";
+            }
+            try {
+                  int historyIndex = Integer.parseInt(tokens[1]) - 1; // Convert to zero-based index
+                  if (historyIndex < 0 || historyIndex >= queryHistory.size()) {
+                        return "ERROR: Invalid history index";
+                  }
+                  String historicalQuery = queryHistory.get(historyIndex);
+                  System.out.println("Executing: " + historicalQuery);
+                  String result = executeSQL(historicalQuery);
+                  return result;
+            } catch (NumberFormatException e) {
+                  return "ERROR: Invalid index format";
+            }
+      }
+
+      // Method to clear query history
+      public String clearHistory(String[] tokens) {
+            if (tokens.length >= 2 && tokens[1].equalsIgnoreCase("HISTORY")) {
+                  queryHistory.clear();
+                  return "Query history cleared.";
+            }
+            return "ERROR: Unknown command";
       }
 
       // HELPER METHODS
