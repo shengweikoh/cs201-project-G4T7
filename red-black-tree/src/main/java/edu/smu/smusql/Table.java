@@ -116,6 +116,23 @@ public class Table {
         }
     }
 
+    public void deleteRows(Set<String> rowsToDelete) {
+        // Delete the rows from the column TreeMaps
+        for (String column : columns) {
+            TreeMap<String, List<String>> columnMap = getColumnTreeMap(column);
+            for (String rowId : rowsToDelete) {
+                Map<String, String> row = primaryKeyMap.get(rowId);
+                columnMap.get(row.get(column)).remove(rowId);
+            }
+        }
+
+        // Delete the rows from the primaryKeyMap
+        for (String rowId : rowsToDelete) {
+            primaryKeyMap.remove(rowId);
+        }
+
+    }
+
     // Get row by primary key (exact match)
     public Map<String, String> getRowByPrimaryKey(String primaryKeyValue) {
         return primaryKeyMap.get(primaryKeyValue); // O(1) average time

@@ -4,6 +4,7 @@ import java.util.*;
 
 public class Engine {
     private Database database = new Database();
+    private TransactionLog transactionLog = new TransactionLog();
 
     public Database getDatabase() {
         return database;
@@ -24,6 +25,8 @@ public class Engine {
                 return update(tokens);
             case "DELETE":
                 return delete(tokens);
+            case "UNDO":
+                return undo();
             default:
                 return "ERROR: Unknown command";
         }
@@ -58,6 +61,11 @@ public class Engine {
         } catch (IllegalArgumentException e) {
             return "ERROR: " + e.getMessage(); // Return specific error messages
         }
+
+        // After successful insertion, log the transaction
+        Set<String> primaryKeys = new HashSet<>();
+        primaryKeys.add(primaryKey);
+        transactionLog.addTransaction(new Transaction("INSERT", tableName, primaryKeys, null)); // No previous state
 
         return "Row inserted into " + tableName;
     }
@@ -133,10 +141,14 @@ public class Engine {
 
         TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
         Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();
+        
+        Map<String, Map<String, String>> previousStates = new HashMap<>();
 
         // Remove id from the column TreeMap
         for (String primaryKey : rowsToUpdate) {
             Map<String, String> row = rows.get(primaryKey);
+            previousStates.put(primaryKey, new HashMap<>(row)); // Deep copy
+
             // Remove id from previous key
             columnMap.get(row.get(updatedColumn)).remove(primaryKey);
             // Update the row with the new value
@@ -149,6 +161,9 @@ public class Engine {
         } else {
             columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
         }
+
+        // Log the transaction
+        transactionLog.addTransaction(new Transaction("UPDATE", tableName, rowsToUpdate, previousStates));
 
         return "Table " + tableName + " updated. " + rowsToUpdate.size() + " row(s) affected.";
     }
@@ -215,22 +230,17 @@ public class Engine {
             }
         }
 
-        List<String> columns = table.getColumns();
-        Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();
+        Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();// Capture previous states of rows to delete
+        Map<String, Map<String, String>> previousStates = new HashMap<>();
 
-        // Delete the rows from the column TreeMaps
-        for (String column : columns) {
-            TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(column);
-            for (String rowId : rowsToDelete) {
-                Map<String, String> row = rows.get(rowId);
-                columnMap.get(row.get(column)).remove(rowId);
-            }
+        for (String primaryKey : rowsToDelete) {
+            previousStates.put(primaryKey, new HashMap<>(rows.get(primaryKey))); // Deep copy
         }
 
-        // Delete the rows from the primaryKeyMap
-        for (String rowId : rowsToDelete) {
-            rows.remove(rowId);
-        }
+        table.deleteRows(rowsToDelete);
+
+    // Log the transaction
+    transactionLog.addTransaction(new Transaction("DELETE", tableName, rowsToDelete, previousStates));
 
         return "Rows deleted from " + tableName + ". " + rowsToDelete.size() + " row(s) affected.";
     }
@@ -457,5 +467,40 @@ public class Engine {
         }
 
         return result.toString();
+    }
+
+    // X factor?? - Undo
+    public String undo() {
+        Transaction lastTransaction = transactionLog.getLastTransaction();
+        if (lastTransaction == null) {
+            return "No operation to undo.";
+        }
+    
+        String tableName = lastTransaction.getTableName();
+        Table table = database.getTable(tableName);
+        Set<String> primaryKeys = lastTransaction.getPrimaryKeys();
+    
+        switch (lastTransaction.getOperationType()) {
+            case "INSERT":
+                // Undo insert: delete the inserted rows
+                table.deleteRows(primaryKeys);
+                return "Undo successful: Last insert has been removed from " + tableName + ".";
+            // case "UPDATE":
+            //     // Undo update: restore each row to its previous state
+            //     Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
+            //     for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
+            //         table.updateRow(entry.getKey(), entry.getValue()); // Restore previous state
+            //     }
+            //     return "Undo successful: Last update has been reverted in " + tableName + ".";
+            case "DELETE":
+                // Undo delete: reinsert each deleted row
+                Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
+                for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
+                    table.insertRow(entry.getKey(), new ArrayList<>(entry.getValue().values())); // Reinsert deleted row
+                }
+                return "Undo successful: Last delete has been restored in " + tableName + ".";
+            default:
+                return "ERROR: Unknown operation type.";
+        }
     }
 }
