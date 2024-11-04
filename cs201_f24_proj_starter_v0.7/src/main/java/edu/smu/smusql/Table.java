@@ -25,7 +25,7 @@ public class Table {
     public Table(String tableName, List<String> columns, boolean useBTree) {
         this.tableName = tableName;
         this.primaryKey = columns.get(0); // The first column is used as the primary key
-        this.useBTree = true;
+        this.useBTree = false;
 
         // Validate that columns do not contain duplicates
         Set<String> columnSet = new HashSet<>(columns);
