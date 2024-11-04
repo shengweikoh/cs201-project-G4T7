@@ -108,7 +108,7 @@ public class SelectTest {
         String invalidTableQuery = "SELECT * FROM nonExistentTable";
         String result = engine.executeSQL(invalidTableQuery);
 
-        assertEquals("ERROR: No such table", result);
+        assertEquals("ERROR: No such table: nonExistentTable", result);
     }
 
     @Test

@@ -64,6 +64,7 @@ class BTreeNode<T extends Comparable<T>> {
         }
 
         // If `y` is not a leaf, move `t` children from `y` to `z`
+
         if (!y.isLeaf) {
             for (int j = 0; j < t; j++) {
                 z.children.add(y.children.remove(t));
@@ -113,7 +114,6 @@ class BTreeNode<T extends Comparable<T>> {
     }
 }
 
-// BTree class
 public class BTree<T extends Comparable<T>> {
     private BTreeNode<T> root;
     private int t;

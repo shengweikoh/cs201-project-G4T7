@@ -28,7 +28,7 @@ class InsertTest {
         // System.out.println("---INSERT COMMAND TEST---\n");
         // Execute insert command
         String result = engine.executeSQL("INSERT INTO Users VALUES (1, Alice, 30)");
-        assertEquals("Insertion Successful", result);
+        assertEquals("Row inserted into Users", result);
 
         // Retrieve the table and check the inserted row
         Table usersTable = database.getTable("Users");
@@ -53,7 +53,7 @@ class InsertTest {
     void testInsertDuplicatePrimaryKey() {
         // First insert
         String result1 = engine.executeSQL("INSERT INTO Users VALUES (1, Alice, 30)");
-        assertEquals("Insertion Successful", result1);
+        assertEquals("Row inserted into Users", result1);
 
         // Attempt to insert with the same primary key
         String result2 = engine.executeSQL("INSERT INTO Users VALUES (1, 'Charlie', 25)");
@@ -65,6 +65,6 @@ class InsertTest {
     void testInsertWithNonexistentTable() {
         // Attempt to insert into a nonexistent table
         String result = engine.executeSQL("INSERT INTO NonexistentTable VALUES (4, 'David', 22)");
-        assertEquals("ERROR: Table not found", result);
+        assertEquals("ERROR: No such table: NonexistentTable", result);
     }
 }

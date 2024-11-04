@@ -24,7 +24,7 @@ public class Database {
     // Method to retrieve a table by name
     public Table getTable(String tableName) {
         if (!tables.containsKey(tableName)) {
-            throw new IllegalArgumentException("Table not found");
+            throw new IllegalArgumentException("No such table");
         }
         return tables.get(tableName);
     }
@@ -32,7 +32,7 @@ public class Database {
     // Method to delete a table by name
     public void deleteTable(String tableName) {
         if (!tables.containsKey(tableName)) {
-            throw new IllegalArgumentException("Table not found");
+            throw new IllegalArgumentException("No such table");
         }
         tables.remove(tableName);
     }

@@ -31,7 +31,7 @@ public class DeleteTest {
         String deleteResult = engine.executeSQL(deleteQuery);
 
         // Verify DELETE was successful
-        assertEquals("DELETE successful", deleteResult);
+        assertEquals("Rows deleted from student. 1 row(s) affected.", deleteResult);
 
         // Check that row with id=1 is no longer present
         String selectQuery = "SELECT * FROM student WHERE id = 1";
@@ -53,7 +53,7 @@ public class DeleteTest {
         // DELETE rows where gpa < 3.8
         String deleteQuery = "DELETE FROM student WHERE gpa < 3.8";
         String deleteResult = engine.executeSQL(deleteQuery);
-        assertEquals("DELETE successful", deleteResult);
+        assertEquals("Rows deleted from student. 2 row(s) affected.", deleteResult);
 
         // Verify only the expected rows remain
         String selectAllQuery = "SELECT * FROM student";
@@ -69,7 +69,7 @@ public class DeleteTest {
         // Attempt to DELETE a non-existent row
         String deleteQuery = "DELETE FROM student WHERE id = 10";
         String deleteResult = engine.executeSQL(deleteQuery);
-        assertEquals("DELETE successful", deleteResult); // Should still return "DELETE successful"
+        assertEquals("Rows deleted from student. 0 row(s) affected.", deleteResult); // Should still return "DELETE successful"
 
         // Verify no rows were actually deleted
         String selectAllQuery = "SELECT * FROM student";
