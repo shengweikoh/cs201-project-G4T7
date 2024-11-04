@@ -70,22 +70,13 @@ public class Table {
     }
 
     // Insert a row into the table
-    public void insertRow(String primaryKeyValue, List<String> values) {
-        if (values.size() != columns.size()) {
-            throw new IllegalArgumentException("Number of values doesn't match number of columns");
-        }
+    public void insertRow(String primaryKeyValue, Map<String, String> row) {
 
         if (primaryKeyMap.containsKey(primaryKeyValue)) {
             throw new IllegalArgumentException("Duplicate primary key: " + primaryKeyValue);
         }
 
-        // Convert all values to Strings within this method
-        Map<String, String> row = new HashMap<>();
-        for (int i = 0; i < columns.size(); i++) {
-            String value = values.get(i).toString().trim(); // Convert each value to String and trim whitespace
-            row.put(columns.get(i), value);
-        }
-
+        
         // Insert the row into primaryKeyMap with a generated row ID
         primaryKeyMap.put(primaryKeyValue, row);
 
@@ -114,6 +105,28 @@ public class Table {
                 treeMap.get(value).add(primaryKeyValue);
             }
         //}
+    }
+
+    public void updateRows(Set<String> rowsToUpdate, String updatedColumn, String updatedValue) {
+        TreeMap<String, List<String>> columnMap = getColumnTreeMap(updatedColumn);
+        Map<String, Map<String, String>> rows = getPrimaryKeyMap();
+
+        // Loop through each row to update
+        for (String primaryKey : rowsToUpdate) {
+            Map<String, String> row = rows.get(primaryKey);
+
+            // Remove the primary key from the previous value's list in the column map
+            columnMap.get(row.get(updatedColumn)).remove(primaryKey);
+            // Update the row with the new value
+            row.put(updatedColumn, updatedValue);
+        }
+
+        // Add ids to the new key in the column TreeMap
+        if (columnMap.containsKey(updatedValue)) {
+            columnMap.get(updatedValue).addAll(rowsToUpdate);
+        } else {
+            columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
+        }
     }
 
     public void deleteRows(Set<String> rowsToDelete) {

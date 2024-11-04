@@ -3,6 +3,7 @@ package edu.smu.smusql;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,8 +67,23 @@ public class Engine {
         // Get primary key from values
         String primaryKey = values.get(0).toString(); // Convert primary key to String
 
+        // Get columns
+        List<String> columns = table.getColumns();
+
+        // Convert all values to Strings within this method
+        Map<String, String> row = new HashMap<>();
+
         try {
-            table.insertRow(primaryKey, values); // Pass raw values, conversion happens in insertRow
+            if (values.size() != columns.size()) {
+                throw new IllegalArgumentException("Number of values doesn't match number of columns");
+            }
+
+            for (int i = 0; i < columns.size(); i++) {
+                String value = values.get(i).toString().trim(); // Convert each value to String and trim whitespace
+                row.put(columns.get(i), value);
+            }
+
+            table.insertRow(primaryKey, row); // Pass raw values, conversion happens in insertRow
         } catch (IllegalArgumentException e) {
             return "ERROR: " + e.getMessage(); // Return specific error messages
         }
@@ -149,31 +165,18 @@ public class Engine {
             }
         }
 
-        TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
         Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();
-        
         Map<String, Map<String, String>> previousStates = new HashMap<>();
 
-        // Remove id from the column TreeMap
         for (String primaryKey : rowsToUpdate) {
-            Map<String, String> row = rows.get(primaryKey);
-            previousStates.put(primaryKey, new HashMap<>(row)); // Deep copy
-
-            // Remove id from previous key
-            columnMap.get(row.get(updatedColumn)).remove(primaryKey);
-            // Update the row with the new value
-            row.put(updatedColumn, updatedValue);
+            previousStates.put(primaryKey, new HashMap<>(rows.get(primaryKey))); // Deep copy
         }
 
-        // Add ids to the new key in the column TreeMap
-        if (columnMap.containsKey(updatedValue)) {
-            columnMap.get(updatedValue).addAll(rowsToUpdate);
-        } else {
-            columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
-        }
+        // Use the updateRows method in Table
+        table.updateRows(rowsToUpdate, updatedColumn, updatedValue);
 
         // Log the transaction
-        transactionLog.addTransaction(new Transaction("UPDATE", tableName, rowsToUpdate, previousStates));
+        transactionLog.addTransaction(new Transaction("UPDATE", tableName, rowsToUpdate, previousStates, updatedColumn));
 
         return "Table " + tableName + " updated. " + rowsToUpdate.size() + " row(s) affected.";
     }
@@ -479,7 +482,7 @@ public class Engine {
         return result.toString();
     }
 
-    // X factor?? - Undo
+    // X factor - Undo
     public String undo() {
         Transaction lastTransaction = transactionLog.getLastTransaction();
         if (lastTransaction == null) {
@@ -495,20 +498,26 @@ public class Engine {
                 // Undo insert: delete the inserted rows
                 table.deleteRows(primaryKeys);
                 return "Undo successful: Last insert has been removed from " + tableName + ".";
-            // case "UPDATE":
-            //     // Undo update: restore each row to its previous state
-            //     Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
-            //     for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
-            //         table.updateRow(entry.getKey(), entry.getValue()); // Restore previous state
-            //     }
-            //     return "Undo successful: Last update has been reverted in " + tableName + ".";
+
+            case "UPDATE":
+                // Undo update: restore each row to its previous state
+                Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
+                String updatedColumn = lastTransaction.getColumnName();
+                for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
+                    Set<String> singleRowSet = Collections.singleton(entry.getKey());
+                    String previousValue = entry.getValue().get(updatedColumn); // Retrieve previous value of updated column
+                    table.updateRows(singleRowSet, updatedColumn, previousValue); // Restore previous state for each row
+                }
+                return "Undo successful: Last update has been reverted in " + tableName + ".";
+
             case "DELETE":
                 // Undo delete: reinsert each deleted row
-                Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
+                previousStates = lastTransaction.getPreviousStates();
                 for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
-                    table.insertRow(entry.getKey(), new ArrayList<>(entry.getValue().values())); // Reinsert deleted row
+                    table.insertRow(entry.getKey(), entry.getValue()); // Reinsert deleted row
                 }
                 return "Undo successful: Last delete has been restored in " + tableName + ".";
+
             default:
                 return "ERROR: Unknown operation type.";
         }
