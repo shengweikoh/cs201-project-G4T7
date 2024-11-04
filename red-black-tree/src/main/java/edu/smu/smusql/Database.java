@@ -14,11 +14,11 @@ public class Database {
     }
 
     // Method to create a new table
-    public void createTable(String tableName, List<String> columns, boolean useBTree) {
+    public void createTable(String tableName, List<String> columns) {
         if (tables.containsKey(tableName)) {
             throw new IllegalArgumentException("Table already exists");
         }
-        tables.put(tableName, new Table(tableName, columns, useBTree));
+        tables.put(tableName, new Table(tableName, columns));
     }
 
     // Method to retrieve a table by name

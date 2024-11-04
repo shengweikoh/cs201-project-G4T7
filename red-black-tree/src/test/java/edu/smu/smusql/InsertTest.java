@@ -20,7 +20,7 @@ class InsertTest {
 
         // Create a table with columns
         List<String> columns = Arrays.asList("id", "name", "age");
-        database.createTable("Users", columns, false); // Adjust to remove the B-Tree if it's not needed here
+        database.createTable("Users", columns);
     }
 
     @Test
