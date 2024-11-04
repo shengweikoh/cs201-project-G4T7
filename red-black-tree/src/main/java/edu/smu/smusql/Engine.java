@@ -1,6 +1,16 @@
 package edu.smu.smusql;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedMap;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class Engine {
     private Database database = new Database();
@@ -374,36 +384,36 @@ public class Engine {
         // System.out.println(columnTreeMap.toString());
     
         // Handle different operators
-        if (table.useBTree()) {
-            // Use BTree indexing if enabled
-            BTree<String> bTree = table.getColumnBTree(column);
-            if (bTree == null) {
-                throw new IllegalArgumentException("Column not found: " + column);
-            }
+        // if (table.useBTree()) {
+        //     // Use BTree indexing if enabled
+        //     BTree<String> bTree = table.getColumnBTree(column);
+        //     if (bTree == null) {
+        //         throw new IllegalArgumentException("Column not found: " + column);
+        //     }
     
-            // Handle different operators for BTree
-            switch (operator) {
-                case "=":
-                    // Exact match in BTree
-                    List<String> exactMatches = bTree.search(valueStr);
-                    if (exactMatches != null) {
-                        matchingRows.addAll(exactMatches);  // Add all primary key references directly
-                    }
-                    break;
-                case ">":
-                case ">=":
-                case "<":
-                case "<=":
-                    // For range queries in BTree, create a custom range search
-                    List<String> rangeMatches = bTree.rangeSearch(valueStr, operator);
-                    if (rangeMatches != null) {
-                        matchingRows.addAll(rangeMatches);  // Add all primary key references directly
-                    }
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported operator: " + operator);
-            }
-        } else {
+        //     // Handle different operators for BTree
+        //     switch (operator) {
+        //         case "=":
+        //             // Exact match in BTree
+        //             List<String> exactMatches = bTree.search(valueStr);
+        //             if (exactMatches != null) {
+        //                 matchingRows.addAll(exactMatches);  // Add all primary key references directly
+        //             }
+        //             break;
+        //         case ">":
+        //         case ">=":
+        //         case "<":
+        //         case "<=":
+        //             // For range queries in BTree, create a custom range search
+        //             List<String> rangeMatches = bTree.rangeSearch(valueStr, operator);
+        //             if (rangeMatches != null) {
+        //                 matchingRows.addAll(rangeMatches);  // Add all primary key references directly
+        //             }
+        //             break;
+        //         default:
+        //             throw new IllegalArgumentException("Unsupported operator: " + operator);
+        //     }
+        // } else {
             // Use TreeMap (Red-Black Tree) indexing if BTree is not used
             TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
             if (columnTreeMap == null) {
@@ -441,7 +451,7 @@ public class Engine {
                 default:
                     throw new IllegalArgumentException("Unsupported operator: " + operator);
             }
-        }
+        //}
 
         return matchingRows;
     }

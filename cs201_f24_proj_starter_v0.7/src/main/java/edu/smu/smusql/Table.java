@@ -12,7 +12,7 @@ public class Table {
     private final String tableName;
     private final List<String> columns;
     private final String primaryKey;
-    // private final boolean useBTree;
+    //private final boolean useBTree;
 
     // HashMap for exact primary key lookups
     private Map<String, Map<String, String>> primaryKeyMap;
@@ -22,10 +22,10 @@ public class Table {
     private Map<String, TreeMap<String, List<String>>> columnRedBlackTrees; // For Red-Black tree indexing
 
     // Constructor to initialize the table with a name, columns, and primary key
-    public Table(String tableName, List<String> columns, boolean useBTree) {
+    public Table(String tableName, List<String> columns) {
         this.tableName = tableName;
         this.primaryKey = columns.get(0); // The first column is used as the primary key
-        // this.useBTree = false;
+        
 
         // Validate that columns do not contain duplicates
         Set<String> columnSet = new HashSet<>(columns);
@@ -36,18 +36,11 @@ public class Table {
         this.columns = new ArrayList<>(columns);
         this.primaryKeyMap = new HashMap<>();
 
-        // Initialize appropriate index structures
-        // if (this.useBTree) {
-        //     this.columnBTrees = new HashMap<>();
-        //     for (String column : columns) {
-        //         columnBTrees.put(column, new BTree<>(3)); // Example: B-tree with minimum degree 3
-        //     }
-        // } else {
-            this.columnRedBlackTrees = new HashMap<>();
-            for (String column : columns) {
-                columnRedBlackTrees.put(column, new TreeMap<>()); // TreeMap is a Red-Black tree
-            }
-        //}
+       
+        this.columnRedBlackTrees = new HashMap<>();
+        for (String column : columns) {
+            columnRedBlackTrees.put(column, new TreeMap<>()); // TreeMap is a Red-Black tree
+        }
     }
 
     // Get the TreeMap for a specific column for Red-Black tree indexing
@@ -99,7 +92,7 @@ public class Table {
         //                                                  // columnval:reference(pointing to the row)
         //         }
         //     }
-        // } else {
+        //} else {
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
                 String value = row.get(column).toString(); // Store value as String
@@ -114,23 +107,6 @@ public class Table {
                 treeMap.get(value).add(primaryKeyValue);
             }
         //}
-    }
-
-    public void deleteRows(Set<String> rowsToDelete) {
-        // Delete the rows from the column TreeMaps
-        for (String column : columns) {
-            TreeMap<String, List<String>> columnMap = getColumnTreeMap(column);
-            for (String rowId : rowsToDelete) {
-                Map<String, String> row = primaryKeyMap.get(rowId);
-                columnMap.get(row.get(column)).remove(rowId);
-            }
-        }
-
-        // Delete the rows from the primaryKeyMap
-        for (String rowId : rowsToDelete) {
-            primaryKeyMap.remove(rowId);
-        }
-
     }
 
     // Get row by primary key (exact match)
