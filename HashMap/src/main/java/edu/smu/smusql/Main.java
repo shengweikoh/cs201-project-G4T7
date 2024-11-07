@@ -33,7 +33,7 @@ public class Main {
                 break;
             }else if (query.equalsIgnoreCase("experiment")) {
                 System.out.println("Running experiments...");
-                runExperiments();
+                runExperiments(); //type experiment to run the method below
                 break;
             }
 
@@ -43,13 +43,13 @@ public class Main {
     }
 
 
-
+    //implement for different experiments
     private static void runExperiments() {
         ExperimentHelper experimentHelper = new ExperimentHelper();
         Engine engine = new Engine();
 
         System.out.println("Running Heavy Read Evaluation:");
-        evaluateHeavyRead(experimentHelper, engine, 100000);
+        evaluateHeavyRead(experimentHelper, engine, 100000); // change the number of queries here
 
         System.out.println("Running Balanced Evaluation:");
         evaluateBalanced(experimentHelper, engine, 100000);
@@ -60,21 +60,21 @@ public class Main {
 
     private static void evaluateHeavyRead(ExperimentHelper helper, Engine engine, int numCommands) {
         long startTime = System.nanoTime();
-        helper.executeWithRatio(numCommands, 0.7, 0.1, 0.1, 0.1, engine);
+        helper.executeWithRatio(numCommands, 0.7, 0.1, 0.1, 0.1, engine);//change the ratio here 
         long endTime = System.nanoTime();
         System.out.println("Heavy Read took " + (endTime - startTime) / 1_000_000 + " ms.");
     }
 
     private static void evaluateBalanced(ExperimentHelper helper, Engine engine, int numCommands) {
         long startTime = System.nanoTime();
-        helper.executeWithRatio(numCommands, 0.25, 0.25, 0.25, 0.25, engine);
+        helper.executeWithRatio(numCommands, 0.25, 0.25, 0.25, 0.25, engine);//change the ratio here 
         long endTime = System.nanoTime();
         System.out.println("Balanced took " + (endTime - startTime) / 1_000_000 + " ms.");
     }
 
     private static void evaluateHeavyWrite(ExperimentHelper helper, Engine engine, int numCommands) {
         long startTime = System.nanoTime();
-        helper.executeWithRatio(numCommands, 0.1, 0.5, 0.3, 0.1, engine);
+        helper.executeWithRatio(numCommands, 0.1, 0.5, 0.3, 0.1, engine);//change the ratio here 
         long endTime = System.nanoTime();
         System.out.println("Heavy Write took " + (endTime - startTime) / 1_000_000 + " ms.");
     }
