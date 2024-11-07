@@ -31,11 +31,52 @@ public class Main {
                 double elapsedTimeInSecond = (double) elapsedTime / 1_000_000_000;
                 System.out.println("Time elapsed: " + elapsedTimeInSecond + " seconds");
                 break;
+            }else if (query.equalsIgnoreCase("experiment")) {
+                System.out.println("Running experiments...");
+                runExperiments();
+                break;
             }
 
             System.out.println(dbEngine.executeSQL(query));
         }
         scanner.close();
+    }
+
+
+
+    private static void runExperiments() {
+        ExperimentHelper experimentHelper = new ExperimentHelper();
+        Engine engine = new Engine();
+
+        System.out.println("Running Heavy Read Evaluation:");
+        evaluateHeavyRead(experimentHelper, engine, 100000);
+
+        System.out.println("Running Balanced Evaluation:");
+        evaluateBalanced(experimentHelper, engine, 100000);
+
+        System.out.println("Running Heavy Write Evaluation:");
+        evaluateHeavyWrite(experimentHelper, engine, 100000);
+    }
+
+    private static void evaluateHeavyRead(ExperimentHelper helper, Engine engine, int numCommands) {
+        long startTime = System.nanoTime();
+        helper.executeWithRatio(numCommands, 0.7, 0.1, 0.1, 0.1, engine);
+        long endTime = System.nanoTime();
+        System.out.println("Heavy Read took " + (endTime - startTime) / 1_000_000 + " ms.");
+    }
+
+    private static void evaluateBalanced(ExperimentHelper helper, Engine engine, int numCommands) {
+        long startTime = System.nanoTime();
+        helper.executeWithRatio(numCommands, 0.25, 0.25, 0.25, 0.25, engine);
+        long endTime = System.nanoTime();
+        System.out.println("Balanced took " + (endTime - startTime) / 1_000_000 + " ms.");
+    }
+
+    private static void evaluateHeavyWrite(ExperimentHelper helper, Engine engine, int numCommands) {
+        long startTime = System.nanoTime();
+        helper.executeWithRatio(numCommands, 0.1, 0.5, 0.3, 0.1, engine);
+        long endTime = System.nanoTime();
+        System.out.println("Heavy Write took " + (endTime - startTime) / 1_000_000 + " ms.");
     }
 
 
