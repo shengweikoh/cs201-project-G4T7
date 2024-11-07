@@ -43,14 +43,8 @@ public class Table {
 
     // Get the TreeMap for a specific column for Red-Black tree indexing
     public TreeMap<String, List<String>> getColumnTreeMap(String column) {
-        if (columnRedBlackTrees == null) {
-            throw new IllegalStateException("TreeMap indexing is not enabled for this table.");
-        }
         if (!columns.contains(column)) {
-            throw new IllegalArgumentException("Column not found: " + column);
-        }
-        if (columnRedBlackTrees == null) {
-            throw new IllegalStateException("TreeMap-based indexing is not enabled for this table.");
+            throw new IllegalArgumentException("ERROR: Column not found: " + column);
         }
         return columnRedBlackTrees.get(column);
     }
@@ -63,11 +57,11 @@ public class Table {
     // Insert a row into the table
     public void insertRow(String primaryKeyValue, List<String> values) {
         if (values.size() != columns.size()) {
-            throw new IllegalArgumentException("Number of values doesn't match number of columns");
+            throw new IllegalArgumentException("ERROR: Number of values doesn't match number of columns");
         }
 
         if (primaryKeyMap.containsKey(primaryKeyValue)) {
-            throw new IllegalArgumentException("Duplicate primary key: " + primaryKeyValue);
+            throw new IllegalArgumentException("ERROR: Duplicate primary key: " + primaryKeyValue);
         }
 
         // Convert all values to Strings within this method

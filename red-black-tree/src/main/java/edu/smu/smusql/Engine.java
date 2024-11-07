@@ -3,8 +3,6 @@ package edu.smu.smusql;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +51,7 @@ public class Engine {
         try {
             table = database.getTable(tableName);
         } catch (IllegalArgumentException e) {
-            return "ERROR: " + e.getMessage() + ": " + tableName;
+            return e.getMessage();
         }
 
         // Extract values between parentheses
@@ -66,7 +64,7 @@ public class Engine {
         try {
             table.insertRow(primaryKey, values); // Pass raw values, conversion happens in insertRow
         } catch (IllegalArgumentException e) {
-            return "ERROR: " + e.getMessage(); // Return specific error messages
+            return e.getMessage(); // Return specific error messages
         }
 
         return "Row inserted into " + tableName;
@@ -84,7 +82,7 @@ public class Engine {
         try {
             table = database.getTable(tableName);
         } catch (IllegalArgumentException e) {
-            return "ERROR: " + e.getMessage() + ": " + tableName;
+            return e.getMessage();
         }
 
         // Parse the columns and values to be updated
@@ -92,9 +90,11 @@ public class Engine {
         if (!table.getColumns().contains(updatedColumn)) {
             return "ERROR: Column not found: " + updatedColumn;
         }
+
         if (!tokens[4].equals("=")) {
             return "ERROR: Invalid assignment in SET clause";
         }
+
         String updatedValue = tokens[5];
 
         // Check if there's a WHERE clause
@@ -227,7 +227,7 @@ public class Engine {
         try {
             table = database.getTable(tableName);
         } catch (IllegalArgumentException e) {
-            return "ERROR: " + e.getMessage() + ": " + tableName;
+            return e.getMessage();
         }
 
         // List of columns from the table
@@ -291,9 +291,6 @@ public class Engine {
         }
 
         String tableName = tokens[2];
-        if (database.listTables().contains(tableName)) {
-            return "ERROR: Table already exists";
-        }
 
         String columnList = queryBetweenParentheses(tokens, 3);
         List<String> columns = Arrays.asList(columnList.split(","));
@@ -303,7 +300,11 @@ public class Engine {
             return "ERROR: No columns specified";
         }
 
-        database.createTable(tableName, columns);
+        try {
+            database.createTable(tableName, columns);
+        } catch (Exception e) {
+            return (e.getMessage());
+        }
 
         return "Table " + tableName + " created";
     }
