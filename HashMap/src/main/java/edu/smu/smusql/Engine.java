@@ -81,15 +81,8 @@ public class Engine {
         Table table = database.getTable(tableName);
         List<List<Object>> resultRows = table.getAllRows();
 
-        // Parse WHERE clause
         if (tokens.length > 4 && tokens[4].equalsIgnoreCase("WHERE")) {
-            String columnName = tokens[5];
-            String operator = tokens[6];
-            String value = tokens[7];
-            if (!operator.equals("=")) {
-                return "ERROR: Only '=' operator is supported in WHERE clause";
-            }
-            resultRows = table.selectWhere(columnName, value);
+            resultRows = applyWhereClause(table, tokens, 4);  // Use refactored method here
         }
 
         return formatRows(resultRows, table.getColumns());
@@ -109,29 +102,47 @@ public class Engine {
         String targetColumn = tokens[3];
         String newValue = tokens[5];
 
-        // Parse WHERE clause
-        String columnName = tokens.length > 7 ? tokens[7] : null;
-        String value = tokens.length > 8 ? tokens[9] : null;
+        // Parse WHERE clause if provided
+        List<List<Object>> rowsToUpdate = table.getAllRows();
+        if (tokens.length > 6 && tokens[6].equalsIgnoreCase("WHERE")) {
+            rowsToUpdate = applyWhereClause(table, tokens, 6);
+        }
 
-        return table.updateWhere(columnName, value, targetColumn, newValue);
+        // Perform the update
+        for (List<Object> row : rowsToUpdate) {
+            table.updateRow(row, targetColumn, newValue);
+        }
+
+        return "UPDATE successful";
     }
 
     // DELETE FROM command
-    private String delete(String[] tokens) {
-        if (tokens.length < 4 || !tokens[1].equalsIgnoreCase("FROM")) {
-            return "ERROR: Invalid DELETE syntax";
-        }
-        String tableName = tokens[2];
-        if (!database.tableExists(tableName)) {
-            return "ERROR: Table does not exist";
-        }
-
-        Table table = database.getTable(tableName);
-        String columnName = tokens.length > 4 ? tokens[4] : null;
-        String value = tokens.length > 5 ? tokens[6] : null;
-
-        return table.deleteWhere(columnName, value);
+    // DELETE FROM command
+private String delete(String[] tokens) {
+    if (tokens.length < 4 || !tokens[1].equalsIgnoreCase("FROM")) {
+        return "ERROR: Invalid DELETE syntax";
     }
+    String tableName = tokens[2];
+    if (!database.tableExists(tableName)) {
+        return "ERROR: Table does not exist";
+    }
+
+    Table table = database.getTable(tableName);
+
+    // Check if there is a WHERE clause
+    if (tokens.length > 4 && tokens[3].equalsIgnoreCase("WHERE")) {
+        String columnName = tokens[4];
+        String operator = tokens[5];
+        String value = tokens[6];
+
+        // Use deleteWhere to delete rows that match the WHERE condition
+        return table.deleteWhere(columnName, operator, value);
+    }  else {
+        return "ERROR: DELETE without WHERE is not allowed";  // Prevents full deletion
+    }
+}
+
+
 
     // Helper method to format rows for SELECT output
     private String formatRows(List<List<Object>> rows, List<String> columns) {
@@ -153,4 +164,61 @@ public class Engine {
         }
         return result.toString().trim().replaceAll("\\(", "").replaceAll("\\)", "");
     }
+
+    private List<List<Object>> applyWhereClause(Table table, String[] tokens, int whereIndex) {
+        if (tokens.length <= whereIndex + 3) {
+            throw new IllegalArgumentException("ERROR: Incomplete WHERE clause.");
+        }
+    
+        String columnName = tokens[whereIndex + 1];
+        String operator = tokens[whereIndex + 2];
+        String value = tokens[whereIndex + 3];
+    
+        int columnIndex = table.getColumns().indexOf(columnName);
+        if (columnIndex == -1) {
+            throw new IllegalArgumentException("ERROR: Column " + columnName + " does not exist");
+        }
+    
+        List<List<Object>> filteredRows = new ArrayList<>();
+        for (List<Object> row : table.getAllRows()) {
+            String cellValue = row.get(columnIndex).toString();
+            if (evaluateCondition(cellValue, operator, value)) {
+                filteredRows.add(row);
+            }
+        }
+        return filteredRows;
+    }
+    private boolean evaluateCondition(String cellValue, String operator, String value) {
+        try {
+            // Try to parse as numbers
+            double cellNumber = Double.parseDouble(cellValue);
+            double compareValue = Double.parseDouble(value);
+    
+            switch (operator) {
+                case "=":
+                    return cellNumber == compareValue;
+                case ">":
+                    return cellNumber > compareValue;
+                case "<":
+                    return cellNumber < compareValue;
+                case ">=":
+                    return cellNumber >= compareValue;
+                case "<=":
+                    return cellNumber <= compareValue;
+                default:
+                    throw new IllegalArgumentException("ERROR: Unsupported operator " + operator);
+            }
+        } catch (NumberFormatException e) {
+            // If parsing as numbers fails, treat them as strings
+            switch (operator) {
+                case "=":
+                    return cellValue.equals(value);
+                case "!=":
+                    return !cellValue.equals(value);
+                default:
+                    throw new IllegalArgumentException("ERROR: Unsupported operator " + operator + " for non-numeric values");
+            }
+        }
+    }
+    
 }

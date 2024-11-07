@@ -3,6 +3,7 @@ package edu.smu.smusql;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -40,19 +41,19 @@ public class Table {
         return new ArrayList<>(rows.values());
     }
     //select row by condition
-    public List<List<Object>> selectWhere(String columnName, Object value){
-        List<List<Object>> result = new ArrayList<>();
-        int columnsIndex = columns.indexOf(columnName);
-        if(columnsIndex == -1){
-            return result;
-        }
-        for(List<Object> row : rows.values()){
-            if(row.get(columnsIndex).equals(value)){
-                result.add(row);
-            }
-        }
-        return result;
-    }
+    // public List<List<Object>> selectWhere(String columnName, Object value){
+    //     List<List<Object>> result = new ArrayList<>();
+    //     int columnsIndex = columns.indexOf(columnName);
+    //     if(columnsIndex == -1){
+    //         return result;
+    //     }
+    //     for(List<Object> row : rows.values()){
+    //         if(row.get(columnsIndex).equals(value)){
+    //             result.add(row);
+    //         }
+    //     }
+    //     return result;
+    // }
     public String updateWhere(String columnName, Object value, String targetColumn, Object newValue){
         int columnsIndex = columns.indexOf(columnName);
         int targetIndex = columns.indexOf(targetColumn);
@@ -69,25 +70,49 @@ public class Table {
         return "updated " + updatedRows + " rows";
     }
 
-    public String deleteWhere(String columnName, Object value){
-        int columnsIndex = columns.indexOf(columnName);
-        if(columnsIndex == -1){
+    public String deleteWhere(String columnName, String operator, String value) {
+        int columnIndex = columns.indexOf(columnName);
+        if (columnIndex == -1) {
             return "Column Not found";
         }
+    
         int deletedRows = 0;
-
-        for(Map.Entry<Object,List<Object>> entry: new HashMap<>(rows).entrySet()){
-            if(entry.getValue().get(columnsIndex).equals(value)){
-                rows.remove(entry.getKey());
+        Iterator<Map.Entry<Object, List<Object>>> iterator = rows.entrySet().iterator();
+    
+        while (iterator.hasNext()) {
+            Map.Entry<Object, List<Object>> entry = iterator.next();
+            Object cellValue = entry.getValue().get(columnIndex);
+            
+            if (evaluateCondition(cellValue.toString(), operator, value)) {
+                iterator.remove(); // Safely removes the row
                 deletedRows++;
             }
         }
-        return "Deleted " + deletedRows + " row";
+        return "Deleted " + deletedRows + " rows";
+    }
+    private boolean evaluateCondition(String cellValue, String operator, String value) {
+        double cellNumber = Double.parseDouble(cellValue);
+        double compareValue = Double.parseDouble(value);
+    
+        switch (operator) {
+            case "=": return cellNumber == compareValue;
+            case ">": return cellNumber > compareValue;
+            case "<": return cellNumber < compareValue;
+            case ">=": return cellNumber >= compareValue;
+            case "<=": return cellNumber <= compareValue;
+            default: throw new IllegalArgumentException("ERROR: Unsupported operator " + operator);
+        }
     }
 
-    public List<Object> getRowByPrimaryKey(Object primaryKey){
-        return rows.get(primaryKey);
+    public int deleteAllRows() {
+        int count = rows.size();
+        rows.clear();
+        return count;
     }
+
+    // public List<Object> getRowByPrimaryKey(Object primaryKey){
+    //     return rows.get(primaryKey);
+    // }
 
     public boolean deleteRow(Object primaryKey) {
         return rows.remove(primaryKey) != null;
@@ -98,6 +123,42 @@ public class Table {
     }
     public List<String> getColumns(){
         return columns;
+    }
+
+    public List<List<Object>> filterRows(String columnName, String operator, Object value) {
+        List<List<Object>> result = new ArrayList<>();
+        int columnIndex = columns.indexOf(columnName);
+
+        if (columnIndex == -1) {
+            return result; // Column not found, return empty list
+        }
+
+        for (List<Object> row : rows.values()) {
+            Object cellValue = row.get(columnIndex);
+
+            // Perform the appropriate comparison based on the operator
+            boolean matches = switch (operator) {
+                case "=" -> cellValue.equals(value);
+                case ">" -> ((Comparable<Object>) cellValue).compareTo(value) > 0;
+                case "<" -> ((Comparable<Object>) cellValue).compareTo(value) < 0;
+                case ">=" -> ((Comparable<Object>) cellValue).compareTo(value) >= 0;
+                case "<=" -> ((Comparable<Object>) cellValue).compareTo(value) <= 0;
+                default -> false;
+            };
+
+            if (matches) {
+                result.add(row);
+            }
+        }
+        return result;
+    }
+
+    // New method to update a specific row by setting a new value in a target column
+    public void updateRow(List<Object> row, String targetColumn, Object newValue) {
+        int targetIndex = columns.indexOf(targetColumn);
+        if (targetIndex != -1) {
+            row.set(targetIndex, newValue);
+        }
     }
 
 }
