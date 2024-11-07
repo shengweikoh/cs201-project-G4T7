@@ -28,7 +28,7 @@ public class Table {
         // Validate that columns do not contain duplicate names
         Set<String> columnSet = new HashSet<>(columns);
         if (columnSet.size() != columns.size()) {
-            throw new IllegalArgumentException("Duplicate column names found");
+            throw new IllegalArgumentException("ERROR: Duplicate column names found");
         }
 
         this.columns = new ArrayList<>(columns);
