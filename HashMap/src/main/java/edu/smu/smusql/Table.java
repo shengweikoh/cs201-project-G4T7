@@ -36,7 +36,7 @@ public class Table {
     }
 
     //select row with matching criteria
-    public List<List<Object>> selectAllRows(){
+    public List<List<Object>> getAllRows(){
         return new ArrayList<>(rows.values());
     }
     //select row by condition

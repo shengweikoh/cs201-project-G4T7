@@ -31,12 +31,8 @@ public class Database {
         return table;
     }
 
-    // Method to delete a table by name
-    public void deleteTable(String tableName) {
-        if (!tables.containsKey(tableName.toLowerCase())) {
-            throw new IllegalArgumentException("Table not found");
-        }
-        tables.remove(tableName.toLowerCase());
+    public boolean tableExists(String tableName) {
+        return tables.containsKey(tableName.toLowerCase());
     }
 
     // Method to list all tables
