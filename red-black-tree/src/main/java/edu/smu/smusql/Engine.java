@@ -14,7 +14,6 @@ import java.util.TreeSet;
 
 public class Engine {
     private Database database = new Database();
-    private TransactionLog transactionLog = new TransactionLog();
 
     public Database getDatabase() {
         return database;
@@ -35,8 +34,6 @@ public class Engine {
                 return update(tokens);
             case "DELETE":
                 return delete(tokens);
-            case "UNDO":
-                return undo();
             default:
                 return "ERROR: Unknown command";
         }
@@ -75,7 +72,6 @@ public class Engine {
         // After successful insertion, log the transaction
         Set<String> primaryKeys = new HashSet<>();
         primaryKeys.add(primaryKey);
-        transactionLog.addTransaction(new Transaction("INSERT", tableName, primaryKeys, null)); // No previous state
 
         return "Row inserted into " + tableName;
     }
@@ -172,9 +168,6 @@ public class Engine {
             columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
         }
 
-        // Log the transaction
-        transactionLog.addTransaction(new Transaction("UPDATE", tableName, rowsToUpdate, previousStates));
-
         return "Table " + tableName + " updated. " + rowsToUpdate.size() + " row(s) affected.";
     }
 
@@ -248,9 +241,6 @@ public class Engine {
         }
 
         table.deleteRows(rowsToDelete);
-
-    // Log the transaction
-    transactionLog.addTransaction(new Transaction("DELETE", tableName, rowsToDelete, previousStates));
 
         return "Rows deleted from " + tableName + ". " + rowsToDelete.size() + " row(s) affected.";
     }
@@ -345,8 +335,7 @@ public class Engine {
             return "ERROR: No columns specified";
         }
 
-        // Create the table with the table name and columns
-        database.createTable(tableName, columns, false); // Set to true if want to use BTree
+        database.createTable(tableName, columns);
 
         return "Table " + tableName + " created";
     }
@@ -376,82 +365,43 @@ public class Engine {
         // and auto sort keys in ascending order
         Set<String> matchingRows = new TreeSet<>();
 
-        // Assume we are dealing with TreeMap that stores keys as Strings
-        //TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
-        // if (columnTreeMap == null) {
-        //     throw new IllegalArgumentException("Column not found: " + column);
-        // }
-        // System.out.println(columnTreeMap.toString());
-    
-        // Handle different operators
-        // if (table.useBTree()) {
-        //     // Use BTree indexing if enabled
-        //     BTree<String> bTree = table.getColumnBTree(column);
-        //     if (bTree == null) {
-        //         throw new IllegalArgumentException("Column not found: " + column);
-        //     }
-    
-        //     // Handle different operators for BTree
-        //     switch (operator) {
-        //         case "=":
-        //             // Exact match in BTree
-        //             List<String> exactMatches = bTree.search(valueStr);
-        //             if (exactMatches != null) {
-        //                 matchingRows.addAll(exactMatches);  // Add all primary key references directly
-        //             }
-        //             break;
-        //         case ">":
-        //         case ">=":
-        //         case "<":
-        //         case "<=":
-        //             // For range queries in BTree, create a custom range search
-        //             List<String> rangeMatches = bTree.rangeSearch(valueStr, operator);
-        //             if (rangeMatches != null) {
-        //                 matchingRows.addAll(rangeMatches);  // Add all primary key references directly
-        //             }
-        //             break;
-        //         default:
-        //             throw new IllegalArgumentException("Unsupported operator: " + operator);
-        //     }
-        // } else {
-            // Use TreeMap (Red-Black Tree) indexing if BTree is not used
-            TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
-            if (columnTreeMap == null) {
-                throw new IllegalArgumentException("Column not found: " + column);
-            }
-    
-            // Handle different operators for TreeMap
-            switch (operator) {
-                case "=":
-                    List<String> exactMatches = columnTreeMap.get(valueStr);
-                    if (exactMatches != null) {
-                        matchingRows.addAll(exactMatches);
-                    }
-                    break;
-                case ">":
-                case ">=":
-                case "<":
-                case "<=":
-                    SortedMap<String, List<String>> subMap;
-                
-                    if (operator.equals(">")) {
-                        subMap = columnTreeMap.tailMap(valueStr, false);
-                    } else if (operator.equals(">=")) {
-                        subMap = columnTreeMap.tailMap(valueStr, true);
-                    } else if (operator.equals("<")) {
-                        subMap = columnTreeMap.headMap(valueStr, false);
-                    } else {
-                        subMap = columnTreeMap.headMap(valueStr, true);
-                    }
-                
-                    for (List<String> rows : subMap.values()) {
-                        matchingRows.addAll(rows);
-                    }
-                    break;
-                default:
-                    throw new IllegalArgumentException("Unsupported operator: " + operator);
-            }
-        //}
+        // Use TreeMap (Red-Black Tree) indexing
+        TreeMap<String, List<String>> columnTreeMap = table.getColumnTreeMap(column);
+        if (columnTreeMap == null) {
+            throw new IllegalArgumentException("Column not found: " + column);
+        }
+
+        // Handle different operators for TreeMap
+        switch (operator) {
+            case "=":
+                List<String> exactMatches = columnTreeMap.get(valueStr);
+                if (exactMatches != null) {
+                    matchingRows.addAll(exactMatches);
+                }
+                break;
+            case ">":
+            case ">=":
+            case "<":
+            case "<=":
+                SortedMap<String, List<String>> subMap;
+            
+                if (operator.equals(">")) {
+                    subMap = columnTreeMap.tailMap(valueStr, false);
+                } else if (operator.equals(">=")) {
+                    subMap = columnTreeMap.tailMap(valueStr, true);
+                } else if (operator.equals("<")) {
+                    subMap = columnTreeMap.headMap(valueStr, false);
+                } else {
+                    subMap = columnTreeMap.headMap(valueStr, true);
+                }
+            
+                for (List<String> rows : subMap.values()) {
+                    matchingRows.addAll(rows);
+                }
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported operator: " + operator);
+        }
 
         return matchingRows;
     }
@@ -477,40 +427,5 @@ public class Engine {
         }
 
         return result.toString();
-    }
-
-    // X factor?? - Undo
-    public String undo() {
-        Transaction lastTransaction = transactionLog.getLastTransaction();
-        if (lastTransaction == null) {
-            return "No operation to undo.";
-        }
-    
-        String tableName = lastTransaction.getTableName();
-        Table table = database.getTable(tableName);
-        Set<String> primaryKeys = lastTransaction.getPrimaryKeys();
-    
-        switch (lastTransaction.getOperationType()) {
-            case "INSERT":
-                // Undo insert: delete the inserted rows
-                table.deleteRows(primaryKeys);
-                return "Undo successful: Last insert has been removed from " + tableName + ".";
-            // case "UPDATE":
-            //     // Undo update: restore each row to its previous state
-            //     Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
-            //     for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
-            //         table.updateRow(entry.getKey(), entry.getValue()); // Restore previous state
-            //     }
-            //     return "Undo successful: Last update has been reverted in " + tableName + ".";
-            case "DELETE":
-                // Undo delete: reinsert each deleted row
-                Map<String, Map<String, String>> previousStates = lastTransaction.getPreviousStates();
-                for (Map.Entry<String, Map<String, String>> entry : previousStates.entrySet()) {
-                    table.insertRow(entry.getKey(), new ArrayList<>(entry.getValue().values())); // Reinsert deleted row
-                }
-                return "Undo successful: Last delete has been restored in " + tableName + ".";
-            default:
-                return "ERROR: Unknown operation type.";
-        }
     }
 }

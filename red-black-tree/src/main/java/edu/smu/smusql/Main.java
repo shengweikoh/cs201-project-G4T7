@@ -46,7 +46,7 @@ public class Main {
     public static void autoEvaluate() {
 
         // Set the number of queries to execute
-        int numberOfQueries = 100000; // suppose to be 1 million
+        int numberOfQueries = 1000000; // suppose to be 1 million
 
         // Create tables
         dbEngine.executeSQL("CREATE TABLE users (id, name, age, city)");

@@ -1,7 +1,0 @@
-edu\smu\smusql\Engine.class
-edu\smu\smusql\Parser.class
-edu\smu\smusql\Table.class
-edu\smu\smusql\BTree.class
-edu\smu\smusql\Database.class
-edu\smu\smusql\Main.class
-edu\smu\smusql\BTreeNode.class
