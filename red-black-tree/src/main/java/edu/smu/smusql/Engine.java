@@ -69,10 +69,6 @@ public class Engine {
             return "ERROR: " + e.getMessage(); // Return specific error messages
         }
 
-        // After successful insertion, log the transaction
-        Set<String> primaryKeys = new HashSet<>();
-        primaryKeys.add(primaryKey);
-
         return "Row inserted into " + tableName;
     }
 
@@ -145,28 +141,7 @@ public class Engine {
             }
         }
 
-        TreeMap<String, List<String>> columnMap = table.getColumnTreeMap(updatedColumn);
-        Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();
-        
-        Map<String, Map<String, String>> previousStates = new HashMap<>();
-
-        // Remove id from the column TreeMap
-        for (String primaryKey : rowsToUpdate) {
-            Map<String, String> row = rows.get(primaryKey);
-            previousStates.put(primaryKey, new HashMap<>(row)); // Deep copy
-
-            // Remove id from previous key
-            columnMap.get(row.get(updatedColumn)).remove(primaryKey);
-            // Update the row with the new value
-            row.put(updatedColumn, updatedValue);
-        }
-
-        // Add ids to the new key in the column TreeMap
-        if (columnMap.containsKey(updatedValue)) {
-            columnMap.get(updatedValue).addAll(rowsToUpdate);
-        } else {
-            columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
-        }
+        table.updateRows(rowsToUpdate, updatedColumn, updatedValue);
 
         return "Table " + tableName + " updated. " + rowsToUpdate.size() + " row(s) affected.";
     }
@@ -231,13 +206,6 @@ public class Engine {
             } else {
                 rowsToDelete.addAll(newRows); // OR condition
             }
-        }
-
-        Map<String, Map<String, String>> rows = table.getPrimaryKeyMap();// Capture previous states of rows to delete
-        Map<String, Map<String, String>> previousStates = new HashMap<>();
-
-        for (String primaryKey : rowsToDelete) {
-            previousStates.put(primaryKey, new HashMap<>(rows.get(primaryKey))); // Deep copy
         }
 
         table.deleteRows(rowsToDelete);
@@ -411,10 +379,10 @@ public class Engine {
         StringBuilder result = new StringBuilder();
         result.append(String.join("\t", columns)).append("\n"); // Print column headers
 
-        for (Map<String, String> rowData : rows) {
+        for (Map<String, String> row : rows) {
             for (int i = 0; i < columns.size(); i++) {
                 String column = columns.get(i);
-                String value = rowData.getOrDefault(column, "NULL"); // Use "NULL" if the value is missing
+                String value = row.getOrDefault(column, "NULL"); // Use "NULL" if the value is missing
 
                 result.append(value); // Append the value directly
 

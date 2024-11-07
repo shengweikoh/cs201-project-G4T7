@@ -83,7 +83,7 @@ public class Table {
         for (int i = 0; i < columns.size(); i++) {
             String column = columns.get(i);
             String value = row.get(column).toString(); // Store value as String
-            TreeMap<String, List<String>> treeMap = columnRedBlackTrees.get(column);
+            TreeMap<String, List<String>> treeMap = getColumnTreeMap(column);
 
             // Check if the value already has a list in the TreeMap
             if (!treeMap.containsKey(value)) {
@@ -95,12 +95,32 @@ public class Table {
         }
     }
 
+    public void updateRows(Set<String> rowsToUpdate, String columnName, String updatedValue) {
+        // Remove id from the column TreeMap
+        Map<String, List<String>> columnMap = getColumnTreeMap(columnName);
+        for (String primaryKey : rowsToUpdate) {
+            Map<String, String> row = getRowByPrimaryKey(primaryKey);
+
+            // Remove id from previous key
+            columnMap.get(row.get(columnName)).remove(primaryKey);
+            // Update the row with the new value
+            row.put(columnName, updatedValue);
+        }
+
+        // Add ids to the new key in the column TreeMap
+        if (columnMap.containsKey(updatedValue)) {
+            columnMap.get(updatedValue).addAll(rowsToUpdate);
+        } else {
+            columnMap.put(updatedValue, new ArrayList<>(rowsToUpdate));
+        }
+    }
+
     public void deleteRows(Set<String> rowsToDelete) {
         // Delete the rows from the column TreeMaps
         for (String column : columns) {
             TreeMap<String, List<String>> columnMap = getColumnTreeMap(column);
             for (String rowId : rowsToDelete) {
-                Map<String, String> row = primaryKeyMap.get(rowId);
+                Map<String, String> row = getRowByPrimaryKey(rowId);
                 columnMap.get(row.get(column)).remove(rowId);
             }
         }
