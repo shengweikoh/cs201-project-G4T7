@@ -4,11 +4,14 @@ import java.util.*;
 
 public class Table {
     private final String tableName;
-    private final List<String> columns; // List of column names
+    private final List<String> columns;
     private final String primaryKey;
 
-    // List to store all rows, each row is a List of Objects
-    private List<List<Object>> rows;
+    // HashMap for exact primary key lookups
+    private Map<String, Map<String, Object>> primaryKeyMap;
+
+    // List to store all rows
+    private List<Map<String, Object>> rows;
 
     // Constructor to initialize the table with a name, columns, and primary key
     public Table(String tableName, List<String> columns) {
@@ -22,79 +25,55 @@ public class Table {
         }
 
         this.columns = new ArrayList<>(columns);
+        this.primaryKeyMap = new HashMap<>();
         this.rows = new ArrayList<>();
     }
 
     // Insert a row into the table
-    public void insertRow(List<Object> values) {
+    public void insertRow(String primaryKeyValue, List<Object> values) {
         if (values.size() != columns.size()) {
             throw new IllegalArgumentException("Number of values doesn't match number of columns");
         }
 
-        // Check for duplicate primary key
-        String primaryKeyValue = values.get(0).toString();
-        if (getRowByPrimaryKey(primaryKeyValue) != null) {
+        if (primaryKeyMap.containsKey(primaryKeyValue)) {
             throw new IllegalArgumentException("Duplicate primary key: " + primaryKeyValue);
         }
 
-        // Trim whitespace from String values
-        for (int i = 0; i < values.size(); i++) {
-            if (values.get(i) instanceof String) {
-                values.set(i, values.get(i).toString().trim());
-            }
+        Map<String, Object> row = new HashMap<>();
+        for (int i = 0; i < columns.size(); i++) {
+            String value = values.get(i).toString().trim(); // Convert each value to String and trim whitespace
+            row.put(columns.get(i), value);
         }
-
-        rows.add(values);
+        primaryKeyMap.put(primaryKeyValue, row);
+        rows.add(row);
     }
 
     // Get row by primary key (exact match)
-    public List<Object> getRowByPrimaryKey(String primaryKeyValue) {
-        int primaryKeyIndex = 0; // Since the primary key is the first column
-
-        for (List<Object> row : rows) {
-            if (row.get(primaryKeyIndex).toString().equals(primaryKeyValue)) {
-                return row;
-            }
-        }
-        return null;
-    }
-
-    // Delete a row by primary key
-    public void deleteRow(String primaryKeyValue) {
-        Iterator<List<Object>> iterator = rows.iterator();
-        int primaryKeyIndex = 0; // Since the primary key is the first column
-
-        while (iterator.hasNext()) {
-            List<Object> row = iterator.next();
-            if (row.get(primaryKeyIndex).toString().equals(primaryKeyValue)) {
-                iterator.remove();
-                return;
-            }
-        }
+    public Map<String, Object> getRowByPrimaryKey(String primaryKeyValue) {
+        return primaryKeyMap.get(primaryKeyValue); // O(1) average time
     }
 
     // Range query on a column
-    public List<List<Object>> rangeQuery(String column, String lowerBound, String upperBound) {
-        int columnIndex = columns.indexOf(column);
-        if (columnIndex == -1) {
+    public List<Map<String, Object>> rangeQuery(String column, String lowerBound, String upperBound) {
+        if (!columns.contains(column)) {
             throw new IllegalArgumentException("Column not found: " + column);
         }
 
         // Comparator to sort rows based on the specified column
-        Comparator<List<Object>> comparator = (row1, row2) -> {
-            String val1 = row1.get(columnIndex).toString();
-            String val2 = row2.get(columnIndex).toString();
+        Comparator<Map<String, Object>> comparator = (row1, row2) -> {
+            String val1 = row1.get(column).toString();
+            String val2 = row2.get(column).toString();
             return val1.compareTo(val2);
         };
 
         // Create a copy of the rows list and sort it
-        List<List<Object>> sortedRows = new ArrayList<>(rows);
+        List<Map<String, Object>> sortedRows = new ArrayList<>(rows);
         sortedRows.sort(comparator);
 
-        List<List<Object>> result = new ArrayList<>();
+        List<Map<String, Object>> result = new ArrayList<>();
 
-        for (List<Object> row : sortedRows) {
-            String value = row.get(columnIndex).toString();
+        for (Map<String, Object> row : sortedRows) {
+            String value = row.get(column).toString();
             if (value.compareTo(lowerBound) >= 0 && value.compareTo(upperBound) <= 0) {
                 result.add(row);
             } else if (value.compareTo(upperBound) > 0) {
@@ -107,15 +86,14 @@ public class Table {
     }
 
     // Method to get rows by exact match on a column
-    public List<List<Object>> getRowsByColumnValue(String column, String value) {
-        int columnIndex = columns.indexOf(column);
-        if (columnIndex == -1) {
+    public List<Map<String, Object>> getRowsByColumnValue(String column, String value) {
+        if (!columns.contains(column)) {
             throw new IllegalArgumentException("Column not found: " + column);
         }
 
-        List<List<Object>> result = new ArrayList<>();
-        for (List<Object> row : rows) {
-            if (row.get(columnIndex).toString().equals(value)) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            if (row.get(column).toString().equals(value)) {
                 result.add(row);
             }
         }
@@ -143,7 +121,15 @@ public class Table {
                 '}';
     }
 
-    public List<List<Object>> getAllRows() {
+    public List<Map<String, Object>> getAllRows() {
         return new ArrayList<>(rows);
     }
+
+    public void deleteRow(String primaryKeyValue) {
+        Map<String, Object> row = primaryKeyMap.remove(primaryKeyValue);
+        if (row != null) {
+            rows.remove(row);
+        }
+    }
+
 }

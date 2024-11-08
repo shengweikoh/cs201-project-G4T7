@@ -4,58 +4,38 @@ import java.util.*;
 
 public class Database {
 
-    private List<Table> tables;
+    private Map<String, Table> tables; // Store tables by name
 
     public Database() {
-        this.tables = new ArrayList<>();
+        this.tables = new HashMap<>();
     }
 
     // Method to create a new table
     public void createTable(String tableName, List<String> columns) {
-        if (getTableByName(tableName) != null) {
+        if (tables.containsKey(tableName)) {
             throw new IllegalArgumentException("Table already exists");
         }
-        tables.add(new Table(tableName, columns));
+        tables.put(tableName, new Table(tableName, columns));
     }
 
     // Method to retrieve a table by name
     public Table getTable(String tableName) {
-        Table table = getTableByName(tableName);
-        if (table == null) {
+        if (!tables.containsKey(tableName)) {
             throw new IllegalArgumentException("Table not found");
         }
-        return table;
-    }
-
-    // Helper method to find a table by name
-    private Table getTableByName(String tableName) {
-        for (Table table : tables) {
-            if (table.getTableName().equalsIgnoreCase(tableName)) {
-                return table;
-            }
-        }
-        return null;
+        return tables.get(tableName);
     }
 
     // Method to delete a table by name
     public void deleteTable(String tableName) {
-        Iterator<Table> iterator = tables.iterator();
-        while (iterator.hasNext()) {
-            Table table = iterator.next();
-            if (table.getTableName().equalsIgnoreCase(tableName)) {
-                iterator.remove();
-                return;
-            }
+        if (!tables.containsKey(tableName)) {
+            throw new IllegalArgumentException("Table not found");
         }
-        throw new IllegalArgumentException("Table not found");
+        tables.remove(tableName);
     }
 
     // Method to list all tables
     public Set<String> listTables() {
-        Set<String> tableNames = new HashSet<>();
-        for (Table table : tables) {
-            tableNames.add(table.getTableName());
-        }
-        return tableNames;
+        return tables.keySet();
     }
 }

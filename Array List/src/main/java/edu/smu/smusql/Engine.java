@@ -4,6 +4,7 @@ import java.util.*;
 
 public class Engine {
     private Database database = new Database();
+    private Parser parser = new Parser();
 
     public Database getDatabase() {
         return database;
@@ -17,7 +18,7 @@ public class Engine {
             case "CREATE":
                 return create(tokens);
             case "INSERT":
-                return insert(tokens, query);
+                return insert(tokens);
             case "SELECT":
                 return select(tokens);
             case "UPDATE":
@@ -29,31 +30,13 @@ public class Engine {
         }
     }
 
-    // Insert method
-    public String insert(String[] tokens, String query) {
-        // Check syntax
-        if (!tokens[1].equalsIgnoreCase("INTO")) {
-            return "ERROR: Invalid INSERT syntax";
-        }
+    public String insert(String[] tokens) {
+        // Parse tokens
+        List<Object> parsedData = parser.parseInsert(tokens);
 
-        String tableName = tokens[2];
-
-        // Extract values
-        int valuesIndex = query.toUpperCase().indexOf("VALUES");
-        if (valuesIndex == -1) {
-            return "ERROR: Invalid INSERT syntax, missing VALUES keyword";
-        }
-
-        String valuesPart = query.substring(valuesIndex + 6).trim();
-        // Remove parentheses
-        valuesPart = valuesPart.replaceAll("\\(", "").replaceAll("\\)", "");
-        // Split values
-        String[] valuesArray = valuesPart.split(",");
-
-        List<Object> values = new ArrayList<>();
-        for (String value : valuesArray) {
-            values.add(value.trim().replace("'", "")); // Remove any single quotes
-        }
+        // Get table name and list of values from parsed data
+        String tableName = (String) parsedData.get(0);
+        List<Object> values = (List<Object>) parsedData.get(1);
 
         // Get table from database
         Table table = null;
@@ -63,9 +46,12 @@ public class Engine {
             return e.getMessage();
         }
 
+        // Get primary key from values
+        String primaryKey = values.get(0).toString(); // Convert primary key to String
+
         // Insert row to table
         try {
-            table.insertRow(values);
+            table.insertRow(primaryKey, values); // Pass raw values, conversion happens in insertRow
         } catch (IllegalArgumentException e) {
             return "ERROR: " + e.getMessage(); // Return specific error messages
         }
@@ -73,10 +59,9 @@ public class Engine {
         return "Insertion Successful";
     }
 
-    // Update method
     public String update(String[] tokens) {
         // Check syntax
-        if (tokens.length < 5 || !tokens[2].equalsIgnoreCase("SET")) {
+        if (!tokens[2].equalsIgnoreCase("SET")) {
             return "ERROR: Invalid UPDATE syntax";
         }
 
@@ -86,7 +71,7 @@ public class Engine {
         try {
             table = database.getTable(tableName);
         } catch (IllegalArgumentException e) {
-            return "ERROR: " + e.getMessage();
+            return "ERROR: " + e.getMessage() + ": " + tableName;
         }
 
         // Parse the columns and values to be updated
@@ -97,7 +82,7 @@ public class Engine {
         if (!tokens[4].equals("=")) {
             return "ERROR: Invalid assignment in SET clause";
         }
-        String updatedValue = tokens[5].replace("'", "");
+        String updatedValue = tokens[5];
 
         // Check if there's a WHERE clause
         List<String[]> whereClauseConditions = new ArrayList<>();
@@ -119,7 +104,7 @@ public class Engine {
                         return "ERROR: Column not found: " + column;
                     }
                     String operator = tokens[i];
-                    String value = tokens[i + 1].replace("'", "");
+                    String value = tokens[i + 1];
                     whereClauseConditions.add(new String[]{column, operator, value});
                     i += 1; // Skip the value since it has been processed
                 }
@@ -127,14 +112,14 @@ public class Engine {
         }
 
         // Get rows that satisfy the WHERE clause
-        Set<List<Object>> rowsToUpdate;
+        Set<Map<String, Object>> rowsToUpdate;
         if (whereClauseConditions.isEmpty()) {
             // No WHERE clause: update all rows
             rowsToUpdate = new HashSet<>(table.getAllRows());
         } else {
             rowsToUpdate = evaluateWhereCondition(whereClauseConditions.get(0), table);
             for (int i = 1; i < whereClauseConditions.size(); i++) {
-                Set<List<Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+                Set<Map<String, Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
                 if (andOrConditions.get(i - 1)) {
                     rowsToUpdate.retainAll(newRows);
                 } else {
@@ -144,23 +129,25 @@ public class Engine {
         }
 
         // Update the rows
-        int updatedColumnIndex = table.getColumns().indexOf(updatedColumn);
-
-        for (List<Object> row : rowsToUpdate) {
-            row.set(updatedColumnIndex, updatedValue);
+        for (Map<String, Object> row : rowsToUpdate) {
+            row.put(updatedColumn, updatedValue);
         }
 
         return rowsToUpdate.size() + " row(s) updated in " + tableName;
     }
 
-    // Delete method
     public String delete(String[] tokens) {
         // Check syntax
-        if (tokens.length < 3 || !tokens[1].equalsIgnoreCase("FROM")) {
+        if (!tokens[1].equalsIgnoreCase("FROM")) {
             return "ERROR: Invalid DELETE syntax";
         }
 
         String tableName = tokens[2];
+
+        // Check if table doesn't exist
+        if (!database.listTables().contains(tableName)) {
+            return "ERROR: No such table";
+        }
 
         // Fetch the table
         Table table = null;
@@ -190,22 +177,22 @@ public class Engine {
                         return "ERROR: Column not found: " + column;
                     }
                     String operator = tokens[i];
-                    String value = tokens[i + 1].replace("'", "");
+                    String value = tokens[i + 1];
                     whereClauseConditions.add(new String[]{column, operator, value});
                     i += 1; // Skip the value since it has been processed
                 }
             }
         }
 
-        // Get rows that satisfy the WHERE clause
-        Set<List<Object>> rowsToDelete;
+        // Evaluate WHERE conditions to get rows to delete
+        Set<Map<String, Object>> rowsToDelete;
         if (whereClauseConditions.isEmpty()) {
             // No WHERE clause: delete all rows
             rowsToDelete = new HashSet<>(table.getAllRows());
         } else {
             rowsToDelete = evaluateWhereCondition(whereClauseConditions.get(0), table);
             for (int i = 1; i < whereClauseConditions.size(); i++) {
-                Set<List<Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+                Set<Map<String, Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
                 if (andOrConditions.get(i - 1)) {
                     rowsToDelete.retainAll(newRows);
                 } else {
@@ -215,18 +202,17 @@ public class Engine {
         }
 
         // Delete the matched rows
-        for (List<Object> rowToDelete : rowsToDelete) {
-            String primaryKeyValue = rowToDelete.get(0).toString(); // Primary key is at index 0
+        for (Map<String, Object> rowToDelete : rowsToDelete) {
+            String primaryKeyValue = rowToDelete.get(table.getPrimaryKey()).toString();
             table.deleteRow(primaryKeyValue);
         }
 
         return rowsToDelete.size() + " row(s) deleted from " + tableName;
     }
 
-    // Select method
     public String select(String[] tokens) {
         // Check if the query syntax is valid
-        if (tokens.length < 4 || !tokens[2].equalsIgnoreCase("FROM")) {
+        if (!tokens[1].equals("*") || !tokens[2].equalsIgnoreCase("FROM")) {
             return "ERROR: Invalid SELECT syntax";
         }
 
@@ -252,7 +238,7 @@ public class Engine {
         List<String[]> whereClauseConditions = new ArrayList<>();
         List<Boolean> andOrConditions = new ArrayList<>();
 
-        Set<List<Object>> rows;
+        Set<Map<String, Object>> rows;
 
         if (tokens.length == 4) {
             // No WHERE clause: select all rows
@@ -274,7 +260,7 @@ public class Engine {
                             return "ERROR: Column not found: " + column;
                         }
                         String operator = tokens[i];
-                        String value = tokens[i + 1].replace("'", "");
+                        String value = tokens[i + 1];
                         whereClauseConditions.add(new String[]{column, operator, value});
                         i += 1; // Skip the value since it has been processed
                     }
@@ -288,7 +274,7 @@ public class Engine {
             rows = evaluateWhereCondition(whereClauseConditions.get(0), table);
 
             for (int i = 1; i < whereClauseConditions.size(); i++) {
-                Set<List<Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
+                Set<Map<String, Object>> newRows = evaluateWhereCondition(whereClauseConditions.get(i), table);
                 if (andOrConditions.get(i - 1)) {
                     rows.retainAll(newRows);
                 } else {
@@ -300,12 +286,13 @@ public class Engine {
         StringBuilder result = new StringBuilder();
         result.append(String.join("\t", columns)).append("\n"); // Print column headers
 
-        // Loop through the rows and append the values
-        for (List<Object> row : rows) {
+        // Loop through the rows and append the values without the extra tab at the end
+        for (Map<String, Object> row : rows) {
             for (int i = 0; i < columns.size(); i++) {
-                Object value = row.get(i);
+                String column = columns.get(i);
+                Object value = row.getOrDefault(column, "NULL"); // Use "NULL" if the value is missing
 
-                result.append(value);
+                result.append(value); // Append the value directly
 
                 // Append a tab only if it's not the last column
                 if (i < columns.size() - 1) {
@@ -318,43 +305,40 @@ public class Engine {
         return result.toString();
     }
 
-    // Create method
     public String create(String[] tokens) {
-        if (tokens.length < 4 || !tokens[1].equalsIgnoreCase("TABLE")) {
+        if (!tokens[1].equalsIgnoreCase("TABLE")) {
             return "ERROR: Invalid CREATE TABLE syntax";
         }
 
         String tableName = tokens[2];
-
-        // Extract column definitions
-        String columnsPart = String.join(" ", Arrays.copyOfRange(tokens, 3, tokens.length));
-        columnsPart = columnsPart.trim();
-        if (!columnsPart.startsWith("(") || !columnsPart.endsWith(")")) {
-            return "ERROR: Invalid CREATE TABLE syntax, missing parentheses";
+        if (database.listTables().contains(tableName)) {
+            return "ERROR: Table already exists";
         }
 
-        columnsPart = columnsPart.substring(1, columnsPart.length() - 1); // Remove parentheses
-        String[] columnsArray = columnsPart.split(",");
-        List<String> columns = new ArrayList<>();
-        for (String column : columnsArray) {
-            columns.add(column.trim());
-        }
+        String columnList = queryBetweenParentheses(tokens, 3);
+        List<String> columns = Arrays.asList(columnList.split(","));
+        columns.replaceAll(String::trim);
 
         if (columns.isEmpty()) {
             return "ERROR: No columns specified";
         }
 
         // Create the table with the table name and columns
-        try {
-            database.createTable(tableName, columns);
-        } catch (IllegalArgumentException e) {
-            return "ERROR: " + e.getMessage();
-        }
+        database.createTable(tableName, columns);
 
         return "Table " + tableName + " created";
     }
 
-    // Helper methods
+    // HELPER METHODS
+
+    // Helper method to extract content inside parentheses
+    private String queryBetweenParentheses(String[] tokens, int startIndex) {
+        StringBuilder result = new StringBuilder();
+        for (int i = startIndex; i < tokens.length; i++) {
+            result.append(tokens[i]).append(" ");
+        }
+        return result.toString().trim().replaceAll("\\(", "").replaceAll("\\)", "");
+    }
 
     // Helper method to determine if a string is an operator
     private boolean isOperator(String token) {
@@ -371,33 +355,35 @@ public class Engine {
         }
     }
 
-    private int compareValues(String val1, String val2) {
-        if (isNumeric(val1) && isNumeric(val2)) {
-            Double num1 = Double.parseDouble(val1);
-            Double num2 = Double.parseDouble(val2);
-            return num1.compareTo(num2);
-        } else {
-            return val1.compareTo(val2);
+    private Object parseValue(String valueStr) {
+        valueStr = valueStr.trim();
+
+        // Check if the value is numeric
+        if (isNumeric(valueStr)) {
+            return Double.parseDouble(valueStr); // Always return numeric values as Double
         }
+
+        // Handle Boolean values
+        if (valueStr.equalsIgnoreCase("true") || valueStr.equalsIgnoreCase("false")) {
+            return Boolean.parseBoolean(valueStr);
+        }
+
+        // Otherwise, treat it as a raw string
+        return valueStr;
     }
 
-    private Set<List<Object>> evaluateWhereCondition(String[] whereClauseCondition, Table table) {
-        String column = whereClauseCondition[0].trim(); // Column name (e.g., "age")
+    private Set<Map<String, Object>> evaluateWhereCondition(String[] whereClauseCondition, Table table) {
+        String column = whereClauseCondition[0].trim(); // Column name (e.g., "gpa")
         String operator = whereClauseCondition[1].trim(); // Operator (e.g., ">", "<", "=", etc.)
-        String valueStr = whereClauseCondition[2].trim(); // Value (e.g., "30")
+        String valueStr = whereClauseCondition[2].trim(); // Value (e.g., "3.8")
 
-        Set<List<Object>> matchingRows = new HashSet<>();
-
-        int columnIndex = table.getColumns().indexOf(column);
-        if (columnIndex == -1) {
-            throw new IllegalArgumentException("Column not found: " + column);
-        }
+        Set<Map<String, Object>> matchingRows = new HashSet<>();
 
         // Get all rows from the table
-        List<List<Object>> allRows = table.getAllRows();
+        List<Map<String, Object>> allRows = table.getAllRows();
 
-        for (List<Object> row : allRows) {
-            Object cellValue = row.get(columnIndex);
+        for (Map<String, Object> row : allRows) {
+            Object cellValue = row.get(column);
 
             if (cellValue == null) continue;
 
@@ -435,5 +421,16 @@ public class Engine {
         }
 
         return matchingRows;
+    }
+
+    // Helper method to compare two values as numbers or strings
+    private int compareValues(String val1, String val2) {
+        if (isNumeric(val1) && isNumeric(val2)) {
+            Double num1 = Double.parseDouble(val1);
+            Double num2 = Double.parseDouble(val2);
+            return num1.compareTo(num2);
+        } else {
+            return val1.compareTo(val2);
+        }
     }
 }
