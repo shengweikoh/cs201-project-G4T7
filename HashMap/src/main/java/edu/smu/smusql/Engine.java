@@ -133,7 +133,14 @@ private String delete(String[] tokens) {
     if (tokens.length > 4 && tokens[3].equalsIgnoreCase("WHERE")) {
         String columnName = tokens[4];
         String operator = tokens[5];
-        String value = tokens[6];
+        String value = tokens[6].replaceAll("^['\"]|['\"]$", "");
+
+        if (columnName.equals("id") && operator.equals("=")) {
+            Object primaryKey = value;
+            boolean rowDeleted = table.deleteRow(primaryKey);
+            return rowDeleted ? "Row with primary key " + primaryKey + " deleted" 
+                              : "No row found with primary key " + primaryKey;
+        }
 
         // Use deleteWhere to delete rows that match the WHERE condition
         return table.deleteWhere(columnName, operator, value);
@@ -172,8 +179,9 @@ private String delete(String[] tokens) {
     
         String columnName = tokens[whereIndex + 1];
         String operator = tokens[whereIndex + 2];
-        String value = tokens[whereIndex + 3];
-    
+        //String value = tokens[whereIndex + 3];
+        String value = tokens[whereIndex + 3].replaceAll("^['\"]|['\"]$", ""); // Strip quotes if present
+
         int columnIndex = table.getColumns().indexOf(columnName);
         if (columnIndex == -1) {
             throw new IllegalArgumentException("ERROR: Column " + columnName + " does not exist");
@@ -189,6 +197,7 @@ private String delete(String[] tokens) {
         return filteredRows;
     }
     private boolean evaluateCondition(String cellValue, String operator, String value) {
+        value = value.replaceAll("^['\"]|['\"]$", ""); // Remove quotes around the value if present
         try {
             // Try to parse as numbers
             double cellNumber = Double.parseDouble(cellValue);

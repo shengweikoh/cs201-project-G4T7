@@ -75,7 +75,7 @@ public class Table {
         if (columnIndex == -1) {
             return "Column Not found";
         }
-    
+        // value = value.replaceAll("^['\"]|['\"]$", ""); // Strip quotes if present
         int deletedRows = 0;
         Iterator<Map.Entry<Object, List<Object>>> iterator = rows.entrySet().iterator();
     
@@ -91,16 +91,26 @@ public class Table {
         return "Deleted " + deletedRows + " rows";
     }
     private boolean evaluateCondition(String cellValue, String operator, String value) {
-        double cellNumber = Double.parseDouble(cellValue);
-        double compareValue = Double.parseDouble(value);
+        boolean isNumericComparison = cellValue.matches("-?\\d+(\\.\\d+)?") && value.matches("-?\\d+(\\.\\d+)?");
     
-        switch (operator) {
-            case "=": return cellNumber == compareValue;
-            case ">": return cellNumber > compareValue;
-            case "<": return cellNumber < compareValue;
-            case ">=": return cellNumber >= compareValue;
-            case "<=": return cellNumber <= compareValue;
-            default: throw new IllegalArgumentException("ERROR: Unsupported operator " + operator);
+        if (isNumericComparison) {
+            double cellNumber = Double.parseDouble(cellValue);
+            double compareValue = Double.parseDouble(value);
+            switch (operator) {
+                case "=": return cellNumber == compareValue;
+                case ">": return cellNumber > compareValue;
+                case "<": return cellNumber < compareValue;
+                case ">=": return cellNumber >= compareValue;
+                case "<=": return cellNumber <= compareValue;
+                default: return false;
+            }
+        } else {
+            // String comparison
+            switch (operator) {
+                case "=": return cellValue.equals(value);
+                case "!=": return !cellValue.equals(value);
+                default: return false;
+            }
         }
     }
 
