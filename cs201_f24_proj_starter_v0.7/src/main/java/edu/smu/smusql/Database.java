@@ -1,5 +1,16 @@
 package edu.smu.smusql;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public class Database {
+
+    private Map<String, Table> tables; // Store tables by name
+
+    public Database() {
+        this.tables = new HashMap<>();
     }
 
     // Method to create a new table
