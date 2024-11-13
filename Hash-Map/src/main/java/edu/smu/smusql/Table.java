@@ -90,12 +90,12 @@ public class Table {
         }
         return "Deleted " + deletedRows + " rows";
     }
-    private boolean evaluateCondition(String cellValue, String operator, String value) {
-        boolean isNumericComparison = cellValue.matches("-?\\d+(\\.\\d+)?") && value.matches("-?\\d+(\\.\\d+)?");
-    
-        if (isNumericComparison) {
-            double cellNumber = Double.parseDouble(cellValue);
+    private boolean evaluateCondition(Object cellValue, String operator, String value) {
+        if (cellValue instanceof Number && value.matches("-?\\d+(\\.\\d+)?")) {
+            // If the value is numeric (either Integer or Double), perform numeric comparison
+            double cellNumber = ((Number) cellValue).doubleValue();
             double compareValue = Double.parseDouble(value);
+    
             switch (operator) {
                 case "=": return cellNumber == compareValue;
                 case ">": return cellNumber > compareValue;
@@ -104,14 +104,16 @@ public class Table {
                 case "<=": return cellNumber <= compareValue;
                 default: return false;
             }
-        } else {
-            // String comparison
+        } else if (cellValue instanceof String && value instanceof String) {
+            // If both are strings, perform string comparison
             switch (operator) {
                 case "=": return cellValue.equals(value);
                 case "!=": return !cellValue.equals(value);
                 default: return false;
             }
         }
+        // If types don't match, return false
+        return false;
     }
 
     public int deleteAllRows() {
@@ -134,6 +136,10 @@ public class Table {
     public List<String> getColumns(){
         return columns;
     }
+    public Map<Object, List<Object>> getRows() {
+        return rows;
+    }
+    
 
     public List<List<Object>> filterRows(String columnName, String operator, Object value) {
         List<List<Object>> result = new ArrayList<>();
