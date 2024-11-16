@@ -102,16 +102,16 @@ public class Engine {
         String targetColumn = tokens[3];
         String newValue = tokens[5].replaceAll("^['\"]|['\"]$", "");
     
-        // Parse WHERE clause if provided
+        // parse WHERE clause if provided
         List<List<Object>> rowsToUpdate = table.getAllRows();
         if (tokens.length > 6 && tokens[6].equalsIgnoreCase("WHERE")) {
-            rowsToUpdate = applyWhereClause(table, tokens, 6); // Apply WHERE conditions to filter rows
+            rowsToUpdate = applyWhereClause(table, tokens, 6); // apply WHERE conditions to filter rows
         }
     
-        // Track if any rows were updated
+        // track if any rows were updated
         int updatedRows = 0;
-    
-        // Perform the update on filtered rows
+
+        // perform the update on filtered rows
         for (List<Object> row : rowsToUpdate) {
             table.updateRow(row, targetColumn, newValue);
             updatedRows++; // Increment if a row was updated
@@ -126,14 +126,14 @@ public class Engine {
     }
 
     private String delete(String[] tokens) {
-        // Ensure correct syntax
+        // ensure correct syntax
         if (tokens.length < 3 || !tokens[1].equalsIgnoreCase("FROM")) {
             return "ERROR: Invalid DELETE syntax";
         }
     
         String tableName = tokens[2];
     
-        // Check if table exists
+        // check if table exists
         if (!database.tableExists(tableName)) {
             return "ERROR: Table does not exist";
         }
@@ -152,7 +152,7 @@ public class Engine {
                 : "No rows matched the condition, nothing to delete";
         }
     
-        // Delete rows directly from the HashMap using an iterator
+        // Delete rows directly 
         int deletedCount = 0;
         Iterator<Map.Entry<Object, List<Object>>> iterator = table.getRows().entrySet().iterator();
     
@@ -169,16 +169,7 @@ public class Engine {
     
 
 
-
-
-    
-    
-    
-    
-
-
-
-    // Helper method to format rows for SELECT output
+    // helper method to format rows for SELECT output
     private String formatRows(List<List<Object>> rows, List<String> columns) {
         StringBuilder result = new StringBuilder(String.join("\t", columns)).append("\n");
         for (List<Object> row : rows) {
@@ -190,7 +181,7 @@ public class Engine {
         return result.toString();
     }
 
-    // Helper method to extract content inside parentheses
+    // jelper method to extract content inside parentheses
     private String queryBetweenParentheses(String[] tokens, int startIndex) {
         StringBuilder result = new StringBuilder();
         for (int i = startIndex; i < tokens.length; i++) {
@@ -206,7 +197,7 @@ public class Engine {
         List<Object> values = new ArrayList<>();
         List<String> logicalOperators = new ArrayList<>();
     
-        int i = whereIndex + 1;  // Start processing after the WHERE keyword
+        int i = whereIndex + 1;  // start processing after the WHERE keyword
         while (i < tokens.length) {
             if (tokens[i].equalsIgnoreCase("AND") || tokens[i].equalsIgnoreCase("OR")) {
                 logicalOperators.add(tokens[i].toUpperCase());  // Save logical operators like AND/OR
@@ -214,80 +205,33 @@ public class Engine {
                 continue;
             }
     
-            // Ensure that we have at least three tokens: column, operator, value
+            // ensure that we have at least three tokens: column, operator, value
             if (i + 2 >= tokens.length) {
                 System.out.println("ERROR: Incomplete condition in WHERE clause.");
-                return new ArrayList<>(); // Prevent further processing if the condition is incomplete
+                return new ArrayList<>(); // prevent further processing if the condition is incomplete
             }
-    
+
             String columnName = tokens[i];
             String operator = tokens[i + 1];
-            String value = tokens[i + 2].replaceAll("^['\"]|['\"]$", "");  // Remove any surrounding quotes from value
+            String value = tokens[i + 2].replaceAll("^['\"]|['\"]$", "");  // remove any surrounding quotes from value
     
             System.out.println("Parsing condition: " + columnName + " " + operator + " " + value);
     
             // Check if the operator is valid
             if (!isValidOperator(operator)) {
                 System.out.println("ERROR: Invalid operator in WHERE clause: " + operator);
-                return new ArrayList<>();  // Return empty if invalid operator found
+                return new ArrayList<>();  // return empty if invalid operator found
             }
     
             columnNames.add(columnName);
             operators.add(operator);
             values.add(value);
     
-            i += 3;  // Move to the next condition or logical operator
+            i += 3;  // move to the next condition or logical operator
         }
-    
-        // Now, filter rows based on the extracted conditions and logical operators
+        
         return filterRowsWithLogic(table, columnNames, operators, values, logicalOperators);
     }
-    
-
-    // private List<List<Object>> applyWhereClause(Table table, String[] tokens, int whereIndex) {
-    //     List<List<Object>> filteredRows = table.getAllRows();
-    //     List<String> columnNames = new ArrayList<>();
-    //     List<String> operators = new ArrayList<>();
-    //     List<Object> values = new ArrayList<>();
-    //     List<String> logicalOperators = new ArrayList<>();
-    
-    //     int i = whereIndex + 1;
-    //     while (i < tokens.length) {
-    //         if (tokens[i].equalsIgnoreCase("AND") || tokens[i].equalsIgnoreCase("OR")) {
-    //             logicalOperators.add(tokens[i].toUpperCase());
-    //             i++;
-    //             continue;
-    //         }
-    
-    //         if (i + 2 >= tokens.length) {
-    //             System.out.println("ERROR: Incomplete condition in WHERE clause.");
-    //             return new ArrayList<>(); // Prevent deletion if syntax is incorrect
-    //         }
-    
-    //         String columnName = tokens[i];
-    //         String operator = tokens[i + 1];
-    //         String value = tokens[i + 2].replaceAll("^['\"]|['\"]$", ""); // Remove any quotes around the value
-
-    //         System.out.println("Parsing condition: " + columnName + " " + operator + " " + value);
-
-    
-    //         // Check if the operator is valid
-    //         if (!isValidOperator(operator)) {
-    //             System.out.println("ERROR: Invalid operator in WHERE clause: " + operator);
-    //             return new ArrayList<>(); // Prevent deletion if an invalid operator is used
-    //         }
-
-            
-    
-    //         columnNames.add(columnName);
-    //         operators.add(operator);
-    //         values.add(value);
-    
-    //         i += 3; // Move to the next condition or logical operator
-    //     }
-    
-    //     return filterRowsWithLogic(table, columnNames, operators, values, logicalOperators);
-    // }
 
     
     private List<List<Object>> filterRowsWithLogic(
@@ -296,28 +240,28 @@ public class Engine {
     List<List<Object>> filteredRows = new ArrayList<>();
 
     for (List<Object> row : table.getAllRows()) {
-        boolean matches = true; // Start with true to allow initial condition check
+        boolean matches = true; 
 
         for (int i = 0; i < columnNames.size(); i++) {
             String columnName = columnNames.get(i);
             String operator = operators.get(i);
             Object value = values.get(i);
 
-            // Find the index of the current column
+            // find the index of the current column
             int columnIndex = table.getColumns().indexOf(columnName);
             if (columnIndex == -1) {
                 System.out.println("ERROR: Column " + columnName + " does not exist.");
                 matches = false;
-                break; // Skip this row if the column doesn't exist
+                break; 
             }
 
             Object cellValue = row.get(columnIndex);
             boolean conditionMatch = evaluateCondition(cellValue.toString(), operator, value.toString());
 
             if (i == 0) {
-                matches = conditionMatch; // Initialize with the first condition
+                matches = conditionMatch; // initialize with the first condition
             } else if (i - 1 < logicalOperators.size()) { 
-                // Ensure logical operator is in bounds
+                // ensure logical operator is in bounds
                 String logicalOperator = logicalOperators.get(i - 1);
                 if (logicalOperator.equals("AND")) {
                     matches &= conditionMatch;
@@ -326,7 +270,7 @@ public class Engine {
                 }
             }
 
-            // Short-circuit if an AND condition fails
+            
             if (!matches && i > 0 && logicalOperators.get(i - 1).equals("AND")) {
                 break;
             }
@@ -349,7 +293,7 @@ public class Engine {
     private boolean evaluateCondition(String cellValue, String operator, String value) {
         value = value.replaceAll("^['\"]|['\"]$", ""); // Remove quotes around the value if present
         try {
-            // Try to parse as numbers
+            //parse as numbers
             double cellNumber = Double.parseDouble(cellValue);
             double compareValue = Double.parseDouble(value);
     
@@ -368,7 +312,7 @@ public class Engine {
                     throw new IllegalArgumentException("ERROR: Unsupported operator " + operator);
             }
         } catch (NumberFormatException e) {
-            // If parsing as numbers fails, treat them as strings
+            // treat as string
             switch (operator) {
                 case "=":
                     return cellValue.equals(value);

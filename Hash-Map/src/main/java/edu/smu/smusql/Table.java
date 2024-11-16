@@ -40,20 +40,7 @@ public class Table {
     public List<List<Object>> getAllRows(){
         return new ArrayList<>(rows.values());
     }
-    //select row by condition
-    // public List<List<Object>> selectWhere(String columnName, Object value){
-    //     List<List<Object>> result = new ArrayList<>();
-    //     int columnsIndex = columns.indexOf(columnName);
-    //     if(columnsIndex == -1){
-    //         return result;
-    //     }
-    //     for(List<Object> row : rows.values()){
-    //         if(row.get(columnsIndex).equals(value)){
-    //             result.add(row);
-    //         }
-    //     }
-    //     return result;
-    // }
+   
     public String updateWhere(String columnName, Object value, String targetColumn, Object newValue){
         int columnsIndex = columns.indexOf(columnName);
         int targetIndex = columns.indexOf(targetColumn);
@@ -122,9 +109,7 @@ public class Table {
         return count;
     }
 
-    // public List<Object> getRowByPrimaryKey(Object primaryKey){
-    //     return rows.get(primaryKey);
-    // }
+ 
 
     public boolean deleteRow(Object primaryKey) {
         return rows.remove(primaryKey) != null;

@@ -13,12 +13,7 @@ import java.util.List;
  */
 public class Parser {
 
-    // public void parseInsert(String[] tokens) {
-    //     String tableName = tokens[2]; // The name of the table to be inserted into.
-    //     String valueList = queryBetweenParentheses(tokens, 4); // Get values list between parentheses
-    //     List<String> values = Arrays.asList(valueList.split(",")); // These are the values in the row to be inserted.
-    // }
-
+  
     public List<Object> parseInsert(String[] tokens) {
         String tableName = tokens[2]; // The name of the table to be inserted into.
         String valueList = queryBetweenParentheses(tokens, 4); // Create values list between parentheses
