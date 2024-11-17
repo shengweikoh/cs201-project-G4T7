@@ -31,6 +31,30 @@ public class Main {
                 double elapsedTimeInSecond = (double) elapsedTime / 1_000_000_000;
                 System.out.println("Time elapsed: " + elapsedTimeInSecond + " seconds");
                 break;
+            } else if (query.equalsIgnoreCase("evaluateSelect")) {
+                long startTime = System.nanoTime();
+                autoEvaluateSelect();
+                long stopTime = System.nanoTime();
+                long elapsedTime = stopTime - startTime;
+                double elapsedTimeInSecond = (double) elapsedTime / 1_000_000_000;
+                System.out.println("Time elapsed: " + elapsedTimeInSecond + " seconds");
+                break;
+            } else if (query.equalsIgnoreCase("evaluateInsertDelete")) {
+                long startTime = System.nanoTime();
+                autoEvaluateInsertDelete();
+                long stopTime = System.nanoTime();
+                long elapsedTime = stopTime - startTime;
+                double elapsedTimeInSecond = (double) elapsedTime / 1_000_000_000;
+                System.out.println("Time elapsed: " + elapsedTimeInSecond + " seconds");
+                break;
+            } else if (query.equalsIgnoreCase("evaluateUpdate")) {
+                long startTime = System.nanoTime();
+                autoEvaluateUpdate();
+                long stopTime = System.nanoTime();
+                long elapsedTime = stopTime - startTime;
+                double elapsedTimeInSecond = (double) elapsedTime / 1_000_000_000;
+                System.out.println("Time elapsed: " + elapsedTimeInSecond + " seconds");
+                break;
             }
 
             System.out.println(dbEngine.executeSQL(query));
@@ -39,10 +63,12 @@ public class Main {
     }
 
 
+
     /*
      *  Below is the code for auto-evaluating your work.
      *  DO NOT CHANGE ANYTHING BELOW THIS LINE!
      */
+    // General Case
     public static void autoEvaluate() {
 
         // Set the number of queries to execute
@@ -92,6 +118,147 @@ public class Main {
 
         System.out.println("Finished processing " + numberOfQueries + " queries.");
     }
+
+    // 75% Select and Complex Select
+    public static void autoEvaluateSelect() {
+        int numberOfQueries = 100000;
+
+        // Create tables
+        dbEngine.executeSQL("CREATE TABLE users (id, name, age, city)");
+        dbEngine.executeSQL("CREATE TABLE products (id, name, price, category)");
+        dbEngine.executeSQL("CREATE TABLE orders (id, user_id, product_id, quantity)");
+
+    
+        prepopulateTables(new Random());
+    
+        Random random = new Random();
+    
+        for (int i = 0; i < numberOfQueries; i++) {
+            double probability = random.nextDouble();
+            
+            if (probability < 0.75) {
+                // 75% probability for selectRandomData() or complexSelectQuery()
+                if (random.nextBoolean()) {
+                    selectRandomData(random);
+                } else {
+                    complexSelectQuery(random);
+                }
+            } else {
+                // 25% probability for other queries (Insert, Update, Delete)
+                int queryType = random.nextInt(3);
+                switch (queryType) {
+                    case 0:
+                        insertRandomData(random);
+                        break;
+                    case 1:
+                        updateRandomData(random);
+                        break;
+                    case 2:
+                        deleteRandomData(random);
+                        break;
+                }
+            }
+    
+            if (i % 10000 == 0) {
+                System.out.println("Processed " + i + " queries in autoEvaluateSelect...");
+            }
+        }
+    
+        System.out.println("Finished processing " + numberOfQueries + " queries in autoEvaluateSelect.");
+    }
+    
+
+    // 75% Insert and Delete
+    public static void autoEvaluateInsertDelete() {
+        int numberOfQueries = 100000;
+
+        // Create tables
+        dbEngine.executeSQL("CREATE TABLE users (id, name, age, city)");
+        dbEngine.executeSQL("CREATE TABLE products (id, name, price, category)");
+        dbEngine.executeSQL("CREATE TABLE orders (id, user_id, product_id, quantity)");
+
+    
+        prepopulateTables(new Random());
+    
+        Random random = new Random();
+    
+        for (int i = 0; i < numberOfQueries; i++) {
+            double probability = random.nextDouble();
+            
+            if (probability < 0.75) {
+                // 75% probability for insertRandomData() or deleteRandomData()
+                if (random.nextBoolean()) {
+                    insertRandomData(random);
+                } else {
+                    deleteRandomData(random);
+                }
+            } else {
+                // 25% probability for other queries (Select, Update)
+                int queryType = random.nextInt(2);
+                if (queryType == 0) {
+                    selectRandomData(random);
+                } else {
+                    updateRandomData(random);
+                }
+            }
+    
+            if (i % 10000 == 0) {
+                System.out.println("Processed " + i + " queries in autoEvaluateInsertDelete...");
+            }
+        }
+    
+        System.out.println("Finished processing " + numberOfQueries + " queries in autoEvaluateInsertDelete.");
+    }
+
+    // 75% Update and Complex Update
+    public static void autoEvaluateUpdate() {
+        int numberOfQueries = 100000;
+
+        // Create tables
+        dbEngine.executeSQL("CREATE TABLE users (id, name, age, city)");
+        dbEngine.executeSQL("CREATE TABLE products (id, name, price, category)");
+        dbEngine.executeSQL("CREATE TABLE orders (id, user_id, product_id, quantity)");
+
+    
+        prepopulateTables(new Random());
+    
+        Random random = new Random();
+    
+        for (int i = 0; i < numberOfQueries; i++) {
+            double probability = random.nextDouble();
+            
+            if (probability < 0.75) {
+                // 75% probability for updateRandomData() or complexUpdateQuery()
+                if (random.nextBoolean()) {
+                    updateRandomData(random);
+                } else {
+                    complexUpdateQuery(random);
+                }
+            } else {
+                // 25% probability for other queries (Select, Insert, Delete)
+                int queryType = random.nextInt(3);
+                switch (queryType) {
+                    case 0:
+                        selectRandomData(random);
+                        break;
+                    case 1:
+                        insertRandomData(random);
+                        break;
+                    case 2:
+                        deleteRandomData(random);
+                        break;
+                }
+            }
+    
+            if (i % 10000 == 0) {
+                System.out.println("Processed " + i + " queries in autoEvaluateUpdate...");
+            }
+        }
+    
+        System.out.println("Finished processing " + numberOfQueries + " queries in autoEvaluateUpdate.");
+    }
+
+
 
     private static void prepopulateTables(Random random) {
         System.out.println("Prepopulating users");
